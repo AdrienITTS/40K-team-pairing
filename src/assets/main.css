@@ -1,35 +1,93 @@
 @import './base.css';
 
-#app {
-  max-width: 1280px;
+.container {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+  padding: 0 var(--spacing-lg);
 }
 
-a,
-.green {
+a {
+  color: inherit;
   text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
+  font-weight: 500;
 }
 
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
-  }
+a:hover,
+a:focus-visible {
+  text-decoration: underline;
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: center;
-  }
+/* Shared component primitives — see DESIGN.md `button-primary` / `button-secondary` / `text-link` / `badge-pill` */
 
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
-  }
+.btn-primary,
+.btn-secondary,
+.btn-secondary-on-dark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+  background: var(--color-primary-active);
+  text-decoration: none;
+}
+
+.btn-secondary {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  border: 1px solid var(--color-hairline);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus-visible {
+  background: var(--color-surface-soft);
+  text-decoration: none;
+}
+
+.btn-secondary-on-dark {
+  background: var(--color-surface-dark-elevated);
+  color: var(--color-on-dark);
+}
+
+.btn-secondary-on-dark:hover,
+.btn-secondary-on-dark:focus-visible {
+  background: var(--color-surface-dark-hover);
+  text-decoration: none;
+}
+
+.text-link {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.text-link:hover,
+.text-link:focus-visible {
+  text-decoration: underline;
+}
+
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--color-surface-card);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px var(--spacing-sm);
+  border-radius: var(--radius-pill);
 }
