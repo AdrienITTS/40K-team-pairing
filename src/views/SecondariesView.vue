@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { secondaryMissions } from '../data/secondaries'
+import SecondaryMissionCard from '../components/SecondaryMissionCard.vue'
 
 const total = secondaryMissions.length
 const selected = ref<number | null>(null)
@@ -32,8 +33,45 @@ function onKey(e: KeyboardEvent) {
   else if (e.key === 'ArrowRight') go(1)
 }
 
-onMounted(() => window.addEventListener('keydown', onKey))
-onUnmounted(() => window.removeEventListener('keydown', onKey))
+// Text mode: pin the card to the height of the tallest secondary so switching
+// missions never resizes it. A hidden stack renders every mission at the live
+// width; we take the max rendered height and apply it as a min-height.
+const measurer = ref<HTMLElement | null>(null)
+const textMinHeight = ref<number | null>(null)
+const textCardStyle = computed(() =>
+  textMinHeight.value ? { minHeight: `${textMinHeight.value}px` } : {},
+)
+
+function measureText() {
+  const el = measurer.value
+  if (!el) return
+  let max = 0
+  for (const child of Array.from(el.children)) {
+    max = Math.max(max, (child as HTMLElement).offsetHeight)
+  }
+  textMinHeight.value = max > 0 ? max : null
+}
+
+watch(view, async (v) => {
+  if (v !== 'text') return
+  await nextTick()
+  measureText()
+  // Re-measure once web fonts load, since metrics can shift the tallest card.
+  document.fonts?.ready.then(measureText)
+})
+
+function onResize() {
+  if (view.value === 'text') measureText()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onKey)
+  window.addEventListener('resize', onResize)
+})
+onUnmounted(() => {
+  window.removeEventListener('keydown', onKey)
+  window.removeEventListener('resize', onResize)
+})
 </script>
 
 <template>
@@ -93,55 +131,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             />
           </figure>
 
-          <div v-else class="rules" role="group" :aria-label="`${current.name}, mission details`">
-            <p v-if="current.kindLabel" class="eyebrow">{{ current.kindLabel }}</p>
-            <h2 class="mission-name">{{ current.name }}</h2>
+          <SecondaryMissionCard v-else :mission="current" :style="textCardStyle" />
+        </div>
 
-            <!-- Text fields are trusted, build-time HTML from the source card data. -->
-            <p v-if="current.whenDrawn" class="when-drawn" v-html="current.whenDrawn"></p>
-
-            <div v-for="(section, si) in current.sections" :key="si" class="section">
-              <header class="section-head">
-                <span class="section-when">{{ section.when }}</span>
-                <span
-                  v-if="section.chip"
-                  class="chip"
-                  :class="`chip-${section.chip.toLowerCase()}`"
-                >
-                  {{ section.chip }}
-                </span>
-              </header>
-              <p class="trigger">
-                <span class="trigger-label">WHEN</span>
-                <span>{{ section.trigger }}</span>
-              </p>
-              <ul class="rows">
-                <template v-for="(row, ri) in section.rows" :key="ri">
-                  <li v-if="row.or" class="or-divider" aria-hidden="true">or</li>
-                  <li class="row">
-                    <span class="row-text" v-html="row.text"></span>
-                    <span class="vp" :class="{ 'vp-plus': row.plus }">
-                      <span class="vp-value">{{ row.vp }}</span>
-                      <span class="vp-unit">VP</span>
-                    </span>
-                  </li>
-                </template>
-              </ul>
-              <p v-if="section.cap" class="cap">{{ section.cap }}</p>
-            </div>
-
-            <div v-if="current.action" class="action">
-              <p class="action-title">Action · {{ current.action.title }}</p>
-              <dl class="action-rows">
-                <template v-for="(r, ai) in current.action.rows" :key="ai">
-                  <dt>{{ r.k }}</dt>
-                  <dd v-html="r.v"></dd>
-                </template>
-              </dl>
-            </div>
-
-            <p v-if="current.designerNote" class="designer-note" v-html="current.designerNote"></p>
-          </div>
+        <!-- Off-screen stack used only to measure the tallest secondary so the
+             text card can be pinned to a constant height. -->
+        <div v-if="view === 'text'" ref="measurer" class="rules-measurer" aria-hidden="true">
+          <SecondaryMissionCard v-for="m in secondaryMissions" :key="m.key" :mission="m" />
         </div>
       </div>
     </section>
@@ -300,247 +296,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   border-radius: var(--radius-lg);
 }
 
-.rules {
-  border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-xl);
-  background: var(--color-surface-card);
-  padding: var(--spacing-lg);
+/* Off-screen measurement stack: laid out at the real card width but clipped to
+   zero height so it never shows or affects layout, while each child still
+   reports its natural rendered height for the tallest-card calculation. */
+.rules-measurer {
   width: 100%;
-  max-width: 620px;
-}
-
-.eyebrow {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
-.mission-name {
-  font-family: var(--font-display);
-  font-size: 28px;
-  letter-spacing: -0.5px;
-  margin: 2px 0 var(--spacing-sm);
-  color: var(--color-ink);
-}
-
-.when-drawn {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--color-body);
-  padding: var(--spacing-xs) var(--spacing-sm);
-  border-left: 3px solid var(--color-primary);
-  background: var(--color-surface-soft);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  margin-bottom: var(--spacing-md);
-}
-
-.section {
-  border-top: 1px solid var(--color-hairline);
-  padding-top: var(--spacing-sm);
-  margin-top: var(--spacing-sm);
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-sm);
-  margin-bottom: var(--spacing-sm);
-}
-
-.section-when {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
-.chip {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  padding: 2px var(--spacing-xs);
-  border-radius: var(--radius-xs);
-  border: 1px solid var(--color-hairline);
-  color: var(--color-body-strong);
-}
-
-.chip-fixed {
-  color: var(--color-primary);
-  border-color: var(--color-primary);
-  background: var(--color-primary-tint);
-}
-
-.chip-tactical {
-  color: var(--color-accent-teal);
-  border-color: var(--color-accent-teal);
-  background: var(--color-accent-teal-tint);
-}
-
-.trigger {
-  display: flex;
-  align-items: baseline;
-  gap: var(--spacing-sm);
-  font-size: 13px;
-  color: var(--color-body);
-  margin-bottom: var(--spacing-xs);
-}
-
-.trigger-label {
-  flex-shrink: 0;
-  font-family: var(--font-body);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  padding: 2px 6px;
-  border-radius: var(--radius-xs);
-  background: var(--color-ink);
-  color: var(--color-canvas);
-}
-
-.rows {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--spacing-md);
-}
-
-.row-text {
-  font-size: 14px;
-  line-height: 1.45;
-  color: var(--color-body-strong);
-}
-
-.or-divider {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  text-align: center;
-}
-
-.vp {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-width: 40px;
-  padding: 4px var(--spacing-xs);
-  border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  line-height: 1;
-}
-
-.vp-value {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.vp-unit {
-  font-family: var(--font-body);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  margin-top: 2px;
-}
-
-.cap {
-  font-family: var(--font-body);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--color-muted);
-  text-align: right;
-  margin-top: var(--spacing-sm);
-}
-
-.action {
-  border-top: 1px solid var(--color-hairline);
-  padding-top: var(--spacing-sm);
-  margin-top: var(--spacing-sm);
-}
-
-.action-title {
-  font-family: var(--font-body);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--color-primary);
-  margin-bottom: var(--spacing-xs);
-}
-
-.action-rows {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: var(--spacing-xs) var(--spacing-md);
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.action-rows dt {
-  font-family: var(--font-body);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: var(--color-muted);
-  padding-top: 2px;
-}
-
-.action-rows dd {
-  color: var(--color-body-strong);
-}
-
-.designer-note {
-  font-size: 13px;
-  font-style: italic;
-  line-height: 1.5;
-  color: var(--color-muted);
-  margin-top: var(--spacing-md);
-}
-
-/* --- Rich inline styling of the source card HTML (bold terms, underlines,
-   and amber-highlighted mission keywords), mirroring the printed card. --- */
-.rules :deep(b) {
-  font-weight: 700;
-  color: var(--color-ink);
-}
-
-.rules :deep(u) {
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
-}
-
-.rules :deep(.cB__mark) {
-  font-weight: 600;
-  padding: 0 4px;
-  border-radius: var(--radius-xs);
-  background: var(--color-accent-amber-tint);
-  color: var(--color-accent-amber);
-}
-
-.rules :deep(.cB__wmWord) {
-  font-weight: 700;
-  color: var(--color-ink);
+  height: 0;
+  overflow: hidden;
 }
 
 .arrow {
@@ -607,10 +369,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
   .hero h1 {
     font-size: 32px;
-  }
-
-  .rules {
-    padding: var(--spacing-lg);
   }
 }
 </style>
