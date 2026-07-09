@@ -2,6 +2,8 @@
 import { computed } from 'vue'
 import { moduleLabel, type LayoutLetter, type Matchup } from '../../data/pairing'
 import { factionName } from '../../data/factions'
+import { getDisposition, type Disposition, type DispositionKey } from '../../data/dispositions'
+import DispositionIcon from '../DispositionIcon.vue'
 
 const props = defineProps<{
   matchup: Matchup
@@ -10,9 +12,35 @@ const props = defineProps<{
   index: number
 }>()
 
-const emit = defineEmits<{ layout: [value: LayoutLetter] }>()
+interface ViewLayoutRequest {
+  a: DispositionKey
+  b: DispositionKey
+  letter: LayoutLetter
+  /** Refused/Champion tables play one fixed layout — no A/B/C browsing. */
+  fixed: boolean
+}
+
+const emit = defineEmits<{
+  layout: [value: LayoutLetter]
+  viewLayout: [request: ViewLayoutRequest]
+}>()
 
 const layouts: LayoutLetter[] = ['A', 'B', 'C']
+
+// The terrain layouts are set by the two players' Dispositions, so a map is
+// only available once both are assigned (Dispositions are optional in setup).
+const dispositionPair = computed(() => {
+  const a = props.matchup.playerA.disposition
+  const b = props.matchup.playerB.disposition
+  return a && b ? { a, b } : null
+})
+
+function viewLayout() {
+  const pair = dispositionPair.value
+  if (!pair) return
+  const { layout } = props.matchup
+  emit('viewLayout', { ...pair, letter: layout.value ?? 'A', fixed: layout.kind === 'fixed' })
+}
 
 // Refused and Champion match-ups have no Defender/Attacker side — label both
 // players by the match-up's own type instead.
@@ -27,85 +55,100 @@ function roleFor(side: 'A' | 'B'): string | null {
 
 const roleA = computed(() => roleFor('A'))
 const roleB = computed(() => roleFor('B'))
+
+// Each player's Force Disposition (or null), shown beside their role.
+function dispOf(key: DispositionKey | null | undefined): Disposition | null {
+  return key ? getDisposition(key) : null
+}
+const dispA = computed(() => dispOf(props.matchup.playerA.disposition))
+const dispB = computed(() => dispOf(props.matchup.playerB.disposition))
+
+function dispAccent(key: DispositionKey) {
+  return {
+    '--accent': `var(--color-disposition-${key})`,
+    '--accent-tint': `var(--color-disposition-${key}-tint)`,
+  }
+}
 </script>
 
 <template>
   <article class="matchup">
-    <div class="matchup-info">
+    <header class="matchup-head">
       <span class="table-no">Table {{ index }}</span>
       <span class="module-badge">{{ moduleLabel(matchup.module) }}</span>
-    </div>
+    </header>
 
+    <!-- Both players are full-width rows with an identical column grid (logo ·
+         name · role · disposition), so every label lines up between the two and
+         faction names get the whole row rather than a cramped half-column. -->
     <div class="players">
-      <div class="player side-a">
+      <div class="prow side-a">
+        <span class="sr-only">{{ teamAName }}</span>
         <div class="logo-tile">
           <img
             v-if="matchup.playerA.faction"
             :src="`/images/factions/${matchup.playerA.faction}.png`"
             :alt="matchup.playerA.faction"
-            width="36"
-            height="36"
+            width="34"
+            height="34"
             loading="lazy"
           />
           <span v-else class="logo-fallback">·</span>
         </div>
-        <div class="player-meta">
-          <span class="player-name">{{ factionName(matchup.playerA.faction) }}</span>
-          <span class="player-team">
-            <span class="team-tag">{{ teamAName }}</span>
-            <template v-if="roleA">
-              · <span class="role-tag" :class="`role-${roleA.toLowerCase()}`">{{ roleA }}</span>
-            </template>
-          </span>
-        </div>
+        <span class="prow-name">{{ factionName(matchup.playerA.faction) }}</span>
+        <span class="prow-role" :class="roleA ? `role-${roleA.toLowerCase()}` : ''">{{ roleA }}</span>
+        <span class="prow-disp" :style="dispA ? dispAccent(dispA.key) : undefined">
+          <template v-if="dispA"><DispositionIcon :symbol="dispA.symbol" />{{ dispA.name }}</template>
+        </span>
       </div>
 
-      <span class="vs">vs</span>
-
-      <div class="player player-right side-b">
-        <div class="player-meta">
-          <span class="player-name">{{ factionName(matchup.playerB.faction) }}</span>
-          <span class="player-team">
-            <span class="team-tag">{{ teamBName }}</span>
-            <template v-if="roleB">
-              · <span class="role-tag" :class="`role-${roleB.toLowerCase()}`">{{ roleB }}</span>
-            </template>
-          </span>
-        </div>
+      <div class="prow side-b">
+        <span class="sr-only">{{ teamBName }}</span>
         <div class="logo-tile">
           <img
             v-if="matchup.playerB.faction"
             :src="`/images/factions/${matchup.playerB.faction}.png`"
             :alt="matchup.playerB.faction"
-            width="36"
-            height="36"
+            width="34"
+            height="34"
             loading="lazy"
           />
           <span v-else class="logo-fallback">·</span>
         </div>
+        <span class="prow-name">{{ factionName(matchup.playerB.faction) }}</span>
+        <span class="prow-role" :class="roleB ? `role-${roleB.toLowerCase()}` : ''">{{ roleB }}</span>
+        <span class="prow-disp" :style="dispB ? dispAccent(dispB.key) : undefined">
+          <template v-if="dispB"><DispositionIcon :symbol="dispB.symbol" />{{ dispB.name }}</template>
+        </span>
       </div>
     </div>
 
     <footer class="matchup-foot">
-      <template v-if="matchup.layout.kind === 'defender-choice'">
-        <span class="foot-label">Defender's choice</span>
-        <div class="layout-picker">
-          <button
-            v-for="letter in layouts"
-            :key="letter"
-            type="button"
-            class="layout-btn"
-            :class="{ active: matchup.layout.value === letter }"
-            @click="emit('layout', letter)"
-          >
-            {{ letter }}
-          </button>
-        </div>
-      </template>
-      <template v-else>
-        <span class="foot-label">Roll off for sides</span>
-        <span class="layout-fixed">Layout {{ matchup.layout.value }}</span>
-      </template>
+      <div class="foot-main">
+        <template v-if="matchup.layout.kind === 'defender-choice'">
+          <span class="foot-label">Defender's choice</span>
+          <div class="layout-picker">
+            <button
+              v-for="letter in layouts"
+              :key="letter"
+              type="button"
+              class="layout-btn"
+              :class="{ active: matchup.layout.value === letter }"
+              @click="emit('layout', letter)"
+            >
+              {{ letter }}
+            </button>
+          </div>
+        </template>
+        <template v-else>
+          <span class="foot-label">Roll off for sides</span>
+          <span class="layout-fixed">Layout {{ matchup.layout.value }}</span>
+        </template>
+      </div>
+
+      <button v-if="dispositionPair" type="button" class="view-layout" @click="viewLayout">
+        View layout →
+      </button>
     </footer>
   </article>
 </template>
@@ -115,21 +158,29 @@ const roleB = computed(() => roleFor('B'))
   background: var(--color-surface-card);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-xs) var(--spacing-md);
-  display: grid;
-  grid-template-columns: 100px 1fr 140px;
-  align-items: center;
-  gap: var(--spacing-sm);
-  /* Keep every card the same height so the two columns stay in sync, even when
-     one card's faction name wraps to two lines and another's doesn't. */
-  min-height: 89px;
-}
-
-.matchup-info {
+  padding: var(--spacing-sm) var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 90px;
+  gap: var(--spacing-sm);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.matchup-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
 }
 
 .table-no {
@@ -144,41 +195,60 @@ const roleB = computed(() => roleFor('B'))
   color: var(--color-muted);
 }
 
+/* Shared 4-track grid: the two player rows use `subgrid` so their logo / name /
+   role / disposition columns line up with each other. */
 .players {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: var(--spacing-xs);
-  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  column-gap: var(--spacing-sm);
+  row-gap: var(--spacing-xxs);
 }
 
-.player {
-  display: flex;
+.prow {
+  position: relative;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: var(--spacing-xs);
-  min-width: 0;
+  padding: var(--spacing-xxs) var(--spacing-sm) var(--spacing-xxs) var(--spacing-xs);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius-sm);
 }
 
-.player-right {
-  justify-content: flex-end;
-  text-align: right;
+/* Team identity: a coloured left edge with a matching tint fading inward. */
+.prow.side-a {
+  border-left-color: var(--color-accent-teal);
+  background: linear-gradient(90deg, var(--color-accent-teal-tint), transparent 55%);
+}
+
+.prow.side-b {
+  border-left-color: var(--color-accent-amber);
+  background: linear-gradient(90deg, var(--color-accent-amber-tint), transparent 55%);
 }
 
 .logo-tile {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
   background: var(--color-canvas);
   flex-shrink: 0;
 }
 
 .logo-tile img {
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
+}
+
+.side-a .logo-tile {
+  background: var(--color-accent-teal-tint);
+}
+
+.side-b .logo-tile {
+  background: var(--color-accent-amber-tint);
 }
 
 .logo-fallback {
@@ -187,49 +257,38 @@ const roleB = computed(() => roleFor('B'))
   color: var(--color-muted);
 }
 
-/* Take all the room the logo leaves so long names wrap within the column
-   instead of spilling under the logo or getting clipped. */
-.player-meta {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+/* Full row width now, so the name stays on one line and truncates only in the
+   rare extreme rather than wrapping unpredictably to two. */
+.prow-name {
   min-width: 0;
-}
-
-/* At two-per-row the name column is narrow, so wrap to a second line rather
-   than truncating — "Adepta Sororitas" and "Adeptus Custodes" must stay
-   tellable apart. */
-.player-name {
   font-size: 14px;
-  font-weight: 500;
-  line-height: 1.2;
+  font-weight: 600;
   color: var(--color-ink);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.player-team {
+.prow-role {
   font-size: 12px;
-  color: var(--color-muted);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-/* Colour the team name by side and the role by its board colour, so results
-   read at a glance. */
-.side-a .team-tag {
-  color: var(--color-accent-teal);
+.prow-disp {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
   font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
 }
 
-.side-b .team-tag {
-  color: var(--color-accent-amber);
-  font-weight: 600;
-}
-
-.role-tag {
-  font-weight: 600;
+.prow-disp :deep(svg) {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 .role-defender {
@@ -248,33 +307,26 @@ const roleB = computed(() => roleFor('B'))
   color: var(--color-role-champion);
 }
 
-.side-a .logo-tile {
-  background: var(--color-accent-teal-tint);
-}
-
-.side-b .logo-tile {
-  background: var(--color-accent-amber-tint);
-}
-
-.vs {
-  font-family: var(--font-display);
-  font-size: 15px;
-  font-style: italic;
-  color: var(--color-muted-soft);
-}
-
 .matchup-foot {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: var(--spacing-xxs);
-  padding-left: var(--spacing-md);
-  border-left: 1px solid var(--color-hairline-soft);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding-top: var(--spacing-xs);
+  border-top: 1px solid var(--color-hairline-soft);
+}
+
+.foot-main {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 0;
 }
 
 .foot-label {
   font-size: 12px;
   color: var(--color-muted);
+  white-space: nowrap;
 }
 
 .layout-picker {
@@ -310,31 +362,34 @@ const roleB = computed(() => roleFor('B'))
   color: var(--color-ink);
 }
 
-@media (max-width: 720px) {
-  .matchup {
-    grid-template-columns: 1fr;
+.view-layout {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.view-layout:hover,
+.view-layout:focus-visible {
+  color: var(--color-primary-active);
+  text-decoration: underline;
+}
+
+/* Fallback for engines without `subgrid`: fall back to a flat flex row so the
+   layout stays clean (columns just won't share widths between the two rows). */
+@supports not (grid-template-columns: subgrid) {
+  .prow {
+    display: flex;
     gap: var(--spacing-sm);
   }
 
-  .matchup-info {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    min-width: 0;
-  }
-
-  .players {
-    grid-template-columns: 1fr auto 1fr;
-  }
-
-  .matchup-foot {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    padding-left: 0;
-    padding-top: var(--spacing-sm);
-    border-left: none;
-    border-top: 1px solid var(--color-hairline-soft);
+  .prow-name {
+    flex: 1;
   }
 }
 </style>

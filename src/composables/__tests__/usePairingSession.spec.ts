@@ -59,4 +59,43 @@ describe('usePairingSession', () => {
     session.restart()
     expect(session.state.value).toBeNull()
   })
+
+  it('back steps to the previous choice, one snapshot at a time', () => {
+    const session = usePairingSession()
+    session.start(makeConfig())
+
+    // No history at the very first choice.
+    expect(session.canUndo.value).toBe(false)
+    const s0 = session.state.value!
+
+    // Team A picks a Defender, then team B picks theirs.
+    session.defender('a-0')
+    const s1 = session.state.value!
+    expect(s1).not.toBe(s0)
+    expect(session.canUndo.value).toBe(true)
+
+    expect(currentActor(s1.phase)).toBe('B')
+    session.defender('b-0')
+    expect(session.state.value).not.toBe(s1)
+
+    // Step back to team B's choice, then to team A's — exact snapshots restored.
+    session.back()
+    expect(session.state.value).toBe(s1)
+    session.back()
+    expect(session.state.value).toBe(s0)
+    expect(session.canUndo.value).toBe(false)
+
+    // Nothing left to undo.
+    session.back()
+    expect(session.state.value).toBe(s0)
+  })
+
+  it('start and restart clear the undo history', () => {
+    const session = usePairingSession()
+    session.start(makeConfig())
+    session.defender('a-0')
+    expect(session.canUndo.value).toBe(true)
+    session.restart()
+    expect(session.canUndo.value).toBe(false)
+  })
 })

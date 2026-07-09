@@ -4,19 +4,31 @@ import PairingSetup from '../components/pairing/PairingSetup.vue'
 import PairingRunner from '../components/pairing/PairingRunner.vue'
 import PairingBoard from '../components/pairing/PairingBoard.vue'
 import MatchupCard from '../components/pairing/MatchupCard.vue'
+import LayoutLightbox from '../components/pairing/LayoutLightbox.vue'
 import { usePairingSession } from '../composables/usePairingSession'
 import { layoutForRound, type LayoutLetter } from '../data/pairing'
+import type { DispositionKey } from '../data/dispositions'
 
 const session = usePairingSession()
 
-// Which step of the setup wizard is showing; steps 2 & 3 (army pickers) drop
-// the intro copy so the picker gets full focus.
-const setupStep = ref<1 | 2 | 3>(1)
+// The layout map open in the shared lightbox (live board + results share one).
+const layoutRequest = ref<{
+  a: DispositionKey
+  b: DispositionKey
+  letter: LayoutLetter
+  fixed: boolean
+} | null>(null)
+
+// Which step of the setup wizard is showing; steps 2–5 (army/disposition
+// pickers) drop the intro copy so the picker gets full focus.
+const setupStep = ref<1 | 2 | 3 | 4 | 5>(1)
 
 const state = computed(() => session.state.value)
+// Top-level ref so the template auto-unwraps it for the "Previous choice" link.
+const canUndo = session.canUndo
 
 // PairingSetup unmounts once a round starts; when it reappears (e.g. after
-// "Start over") send the wizard back to step 1 so it doesn't resume mid-flow.
+// "Change rosters") send the wizard back to step 1 so it doesn't resume mid-flow.
 watch(state, (s) => {
   if (!s) setupStep.value = 1
 })
@@ -55,11 +67,18 @@ function onLayout(matchupId: string, value: LayoutLetter) {
           <span class="progress-fill" :style="{ width: `${(decided / teamSize) * 100}%` }" />
         </div>
         <span class="progress-text">{{ decided }} / {{ teamSize }} tables set</span>
-        <button type="button" class="text-link reset" @click="session.reset">Start over</button>
+        <button
+          type="button"
+          class="text-link reset"
+          :disabled="!canUndo"
+          @click="session.back"
+        >
+          ← Previous choice
+        </button>
       </div>
 
       <div class="live">
-        <PairingBoard :state="state" @layout="onLayout" />
+        <PairingBoard :state="state" @layout="onLayout" @view-layout="layoutRequest = $event" />
 
         <section class="panel">
           <PairingRunner
@@ -79,8 +98,9 @@ function onLayout(matchupId: string, value: LayoutLetter) {
         <div>
           <h2 class="panel-title">Round {{ state.config.round }} pairings</h2>
           <p class="results-sub">
-            {{ state.config.teamA.name }} vs {{ state.config.teamB.name }} · {{ teamSize }} tables ·
-            fixed layouts use Layout {{ layoutForRound(state.config.round) }} this round
+            <span class="team-key team-a">{{ state.config.teamA.name }}</span> vs
+            <span class="team-key team-b">{{ state.config.teamB.name }}</span> · {{ teamSize }}
+            tables · fixed layouts use Layout {{ layoutForRound(state.config.round) }} this round
           </p>
         </div>
         <div class="results-actions">
@@ -98,15 +118,19 @@ function onLayout(matchupId: string, value: LayoutLetter) {
           :team-a-name="state.config.teamA.name"
           :team-b-name="state.config.teamB.name"
           @layout="(value) => onLayout(m.id, value)"
+          @view-layout="layoutRequest = $event"
         />
       </div>
 
       <p class="results-note">
         Defender match-ups: the Defender declares Layout A, B or C. Refused Attacker and Champion
-        tables roll off for Attacker/Defender and use the fixed layout for the round.
+        tables roll off for Attacker/Defender and use the fixed layout for the round. Where both
+        players set a Force Disposition, “View layout” shows the terrain maps for that table.
       </p>
     </template>
     </div>
+
+    <LayoutLightbox :request="layoutRequest" @close="layoutRequest = null" />
   </main>
 </template>
 
@@ -229,6 +253,12 @@ function onLayout(matchupId: string, value: LayoutLetter) {
   cursor: pointer;
   background: none;
   border: none;
+  white-space: nowrap;
+}
+
+.reset:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 .results-head {
@@ -244,6 +274,19 @@ function onLayout(matchupId: string, value: LayoutLetter) {
   font-size: 14px;
   color: var(--color-muted);
   margin-top: 4px;
+}
+
+/* Tie each team name to its card-edge gradient colour (teal = A, amber = B). */
+.team-key {
+  font-weight: 600;
+}
+
+.team-key.team-a {
+  color: var(--color-accent-teal);
+}
+
+.team-key.team-b {
+  color: var(--color-accent-amber);
 }
 
 /* "Change rosters" (back to setup) sits beside the primary "New pairing"

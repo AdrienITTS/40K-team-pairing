@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { Allegiance } from '../../data/factions'
-import { allegiances, isSpaceMarine } from '../../data/factions'
+import { allegiances, factionName, isSpaceMarine } from '../../data/factions'
+import { dispositions, type DispositionKey } from '../../data/dispositions'
+import DispositionIcon from '../DispositionIcon.vue'
 import {
   MAX_TEAM_SIZE,
   MIN_TEAM_SIZE,
+  dispositionCap,
   modulesForTeamSize,
   moduleLabel,
   type PairingConfig,
@@ -12,9 +15,11 @@ import {
 
 const emit = defineEmits<{ start: [config: PairingConfig] }>()
 
-// Exposed so the page can react to the wizard step (e.g. hide the intro copy
-// once the user is deep in army selection).
-const step = defineModel<1 | 2 | 3>('step', { default: 1 })
+// The 5-step wizard: 1 Round · 2 Team A armies · 3 Team A dispositions ·
+// 4 Team B armies · 5 Team B dispositions. Exposed so the page can react to the
+// step (e.g. hide the intro copy once the user is deep in setup).
+export type SetupStep = 1 | 2 | 3 | 4 | 5
+const step = defineModel<SetupStep>('step', { default: 1 })
 
 const round = ref(1)
 const teamSize = ref(4)
@@ -22,6 +27,9 @@ const teamAName = ref('')
 const teamBName = ref('')
 const factionsA = ref<string[]>([])
 const factionsB = ref<string[]>([])
+// Optional Force Disposition per faction (keyed by faction key, unique per team).
+const dispositionsA = ref<Record<string, DispositionKey>>({})
+const dispositionsB = ref<Record<string, DispositionKey>>({})
 
 const sizes = Array.from({ length: MAX_TEAM_SIZE - MIN_TEAM_SIZE + 1 }, (_, i) => MIN_TEAM_SIZE + i)
 
@@ -38,7 +46,11 @@ const moduleSummary = computed(() =>
 
 const canAdvanceStep1 = computed(() => Boolean(teamAName.value.trim() && teamBName.value.trim()))
 const canAdvanceStep2 = computed(() => factionsA.value.length === teamSize.value)
-const canStart = computed(() => factionsB.value.length === teamSize.value)
+const canAdvanceStep4 = computed(() => factionsB.value.length === teamSize.value)
+const canStart = canAdvanceStep4
+
+// GAME.MD § 1: at most `cap` players per team may share a Force Disposition.
+const cap = computed(() => dispositionCap(teamSize.value))
 
 watch(round, (v) => {
   if (v < 1) round.value = 1
@@ -47,7 +59,69 @@ watch(round, (v) => {
 watch(teamSize, (size) => {
   factionsA.value = factionsA.value.slice(0, size)
   factionsB.value = factionsB.value.slice(0, size)
+  pruneDispositions()
 })
+
+// Drop any recorded Disposition whose faction is no longer on its team, and any
+// that now exceed the per-team cap (e.g. after the team shrinks and the cap
+// drops) — keeping the first `cap` of each in faction order.
+function pruneDispositions() {
+  const trim = (map: Record<string, DispositionKey>, keys: string[]) => {
+    const counts: Partial<Record<DispositionKey, number>> = {}
+    const out: Record<string, DispositionKey> = {}
+    for (const k of keys) {
+      const d = map[k]
+      if (!d) continue
+      const n = (counts[d] ?? 0) + 1
+      counts[d] = n
+      if (n <= cap.value) out[k] = d
+    }
+    return out
+  }
+  dispositionsA.value = trim(dispositionsA.value, factionsA.value)
+  dispositionsB.value = trim(dispositionsB.value, factionsB.value)
+}
+
+function dispsRef(side: 'A' | 'B') {
+  return side === 'A' ? dispositionsA : dispositionsB
+}
+
+function factionsFor(side: 'A' | 'B') {
+  return side === 'A' ? factionsA.value : factionsB.value
+}
+
+// How many of a team's players have already picked a given Disposition.
+function dispCount(side: 'A' | 'B', disp: DispositionKey): number {
+  const map = dispsRef(side).value
+  return factionsFor(side).filter((k) => map[k] === disp).length
+}
+
+// A Disposition is locked for a faction once the team has hit its cap for it
+// (unless this faction is the one already holding it, so it can be toggled off).
+function dispDisabled(side: 'A' | 'B', key: string, disp: DispositionKey): boolean {
+  if (dispsRef(side).value[key] === disp) return false
+  return dispCount(side, disp) >= cap.value
+}
+
+function toggleDisposition(side: 'A' | 'B', key: string, disp: DispositionKey) {
+  const mapRef = dispsRef(side)
+  if (mapRef.value[key] === disp) {
+    const next = { ...mapRef.value }
+    delete next[key]
+    mapRef.value = next
+  } else if (!dispDisabled(side, key, disp)) {
+    mapRef.value = { ...mapRef.value, [key]: disp }
+  }
+}
+
+// Inline custom-property binding keeps the Disposition accent a token reference
+// (base.css) rather than a hardcoded literal (mirrors LayoutsView).
+function dispAccent(key: DispositionKey) {
+  return {
+    '--accent': `var(--color-disposition-${key})`,
+    '--accent-tint': `var(--color-disposition-${key}-tint)`,
+  }
+}
 
 // A roster may hold at most one Space Marine Chapter (GAME.MD § 1), so once one
 // is picked the other Chapters are locked out for that team.
@@ -65,6 +139,7 @@ function toggleFaction(side: 'A' | 'B', key: string) {
   const list = side === 'A' ? factionsA : factionsB
   if (list.value.includes(key)) {
     list.value = list.value.filter((k) => k !== key)
+    pruneDispositions()
   } else if (list.value.length < teamSize.value && !marineLocked(list.value, key)) {
     list.value = [...list.value, key]
   }
@@ -72,16 +147,16 @@ function toggleFaction(side: 'A' | 'B', key: string) {
 
 function submit() {
   if (!canStart.value) return
+  const players = (side: 'A' | 'B') =>
+    factionsFor(side).map((key, i) => ({
+      id: `${side.toLowerCase()}-${i}`,
+      faction: key,
+      disposition: dispsRef(side).value[key] ?? null,
+    }))
   emit('start', {
     round: round.value,
-    teamA: {
-      name: teamAName.value.trim(),
-      players: factionsA.value.map((key, i) => ({ id: `a-${i}`, faction: key })),
-    },
-    teamB: {
-      name: teamBName.value.trim(),
-      players: factionsB.value.map((key, i) => ({ id: `b-${i}`, faction: key })),
-    },
+    teamA: { name: teamAName.value.trim(), players: players('A') },
+    teamB: { name: teamBName.value.trim(), players: players('B') },
   })
 }
 </script>
@@ -90,8 +165,10 @@ function submit() {
   <form class="setup" @submit.prevent="submit">
     <ol class="stepper">
       <li :class="{ active: step === 1, done: step > 1 }">1 · Round</li>
-      <li :class="{ active: step === 2, done: step > 2 }">2 · {{ teamAName || 'Team A' }}</li>
-      <li :class="{ active: step === 3 }">3 · {{ teamBName || 'Team B' }}</li>
+      <li :class="{ active: step === 2, done: step > 2 }">2 · {{ teamAName || 'Team A' }} armies</li>
+      <li :class="{ active: step === 3, done: step > 3 }">3 · {{ teamAName || 'Team A' }} dispositions</li>
+      <li :class="{ active: step === 4, done: step > 4 }">4 · {{ teamBName || 'Team B' }} armies</li>
+      <li :class="{ active: step === 5 }">5 · {{ teamBName || 'Team B' }} dispositions</li>
     </ol>
 
     <Transition name="step" mode="out-in">
@@ -202,7 +279,51 @@ function submit() {
       </div>
     </section>
 
-    <section v-else key="step-3" class="step">
+    <section v-else-if="step === 3" key="step-3" class="step">
+      <div class="picker-head">
+        <h2 class="picker-title">{{ teamAName }}'s Force Dispositions</h2>
+        <span class="picker-count">optional · max {{ cap }} of each</span>
+      </div>
+      <p class="picker-rule">
+        Assign each player a Force Disposition, or leave any blank — it's optional. Dispositions set
+        the terrain layouts you'll see once each table is paired.
+      </p>
+
+      <ul class="disp-roster">
+        <li v-for="key in factionsA" :key="key" class="disp-row">
+          <span class="disp-faction">
+            <span class="chip-tile">
+              <img :src="`/images/factions/${key}.png`" :alt="factionName(key)" width="40" height="40" loading="lazy" />
+            </span>
+            <span class="chip-name">{{ factionName(key) }}</span>
+          </span>
+          <span class="disp-choices" role="group" :aria-label="`${factionName(key)} disposition`">
+            <button
+              v-for="d in dispositions"
+              :key="d.key"
+              type="button"
+              class="disp-pick"
+              :class="{ chosen: dispositionsA[key] === d.key }"
+              :style="dispAccent(d.key)"
+              :disabled="dispDisabled('A', key, d.key)"
+              :title="d.name"
+              :aria-label="d.name"
+              :aria-pressed="dispositionsA[key] === d.key"
+              @click="toggleDisposition('A', key, d.key)"
+            >
+              <DispositionIcon :symbol="d.symbol" />
+            </button>
+          </span>
+        </li>
+      </ul>
+
+      <div class="nav-row">
+        <button type="button" class="btn-secondary nav-back" @click="step = 2">← Back</button>
+        <button type="button" class="btn-primary nav-next" @click="step = 4">Next →</button>
+      </div>
+    </section>
+
+    <section v-else-if="step === 4" key="step-4" class="step">
       <div class="picker-head">
         <h2 class="picker-title">Pick {{ teamBName }}'s armies</h2>
         <span class="picker-count">{{ factionsB.length }} / {{ teamSize }} selected</span>
@@ -239,7 +360,58 @@ function submit() {
       </div>
 
       <div class="nav-row">
-        <button type="button" class="btn-secondary nav-back" @click="step = 2">← Back</button>
+        <button type="button" class="btn-secondary nav-back" @click="step = 3">← Back</button>
+        <button
+          type="button"
+          class="btn-primary nav-next"
+          :disabled="!canAdvanceStep4"
+          @click="step = 5"
+        >
+          Next →
+        </button>
+      </div>
+    </section>
+
+    <section v-else key="step-5" class="step">
+      <div class="picker-head">
+        <h2 class="picker-title">{{ teamBName }}'s Force Dispositions</h2>
+        <span class="picker-count">optional · max {{ cap }} of each</span>
+      </div>
+      <p class="picker-rule">
+        Assign each player a Force Disposition, or leave any blank — it's optional. Dispositions set
+        the terrain layouts you'll see once each table is paired.
+      </p>
+
+      <ul class="disp-roster">
+        <li v-for="key in factionsB" :key="key" class="disp-row">
+          <span class="disp-faction">
+            <span class="chip-tile">
+              <img :src="`/images/factions/${key}.png`" :alt="factionName(key)" width="40" height="40" loading="lazy" />
+            </span>
+            <span class="chip-name">{{ factionName(key) }}</span>
+          </span>
+          <span class="disp-choices" role="group" :aria-label="`${factionName(key)} disposition`">
+            <button
+              v-for="d in dispositions"
+              :key="d.key"
+              type="button"
+              class="disp-pick"
+              :class="{ chosen: dispositionsB[key] === d.key }"
+              :style="dispAccent(d.key)"
+              :disabled="dispDisabled('B', key, d.key)"
+              :title="d.name"
+              :aria-label="d.name"
+              :aria-pressed="dispositionsB[key] === d.key"
+              @click="toggleDisposition('B', key, d.key)"
+            >
+              <DispositionIcon :symbol="d.symbol" />
+            </button>
+          </span>
+        </li>
+      </ul>
+
+      <div class="nav-row">
+        <button type="button" class="btn-secondary nav-back" @click="step = 4">← Back</button>
         <button type="submit" class="btn-primary nav-next" :disabled="!canStart">
           Start pairing →
         </button>
@@ -540,6 +712,77 @@ function submit() {
   font-size: 13px;
   font-weight: 700;
   color: var(--color-primary);
+}
+
+/* --- Force Disposition assignment (steps 3 & 5) --- */
+.disp-roster {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.disp-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-canvas);
+}
+
+.disp-faction {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  min-width: 0;
+}
+
+.disp-choices {
+  display: flex;
+  gap: var(--spacing-xxs);
+}
+
+.disp-pick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 7px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface-card);
+  color: var(--color-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.disp-pick:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.disp-pick.chosen {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.disp-pick:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.disp-pick :deep(svg) {
+  width: 22px;
+  height: 22px;
 }
 
 .nav-row {

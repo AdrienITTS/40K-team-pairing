@@ -4,6 +4,7 @@ import {
   createPairingState,
   modulesForTeamSize,
   layoutForRound,
+  dispositionCap,
   submitDefender,
   submitAttackers,
   submitCounter,
@@ -94,6 +95,12 @@ describe('modulesForTeamSize', () => {
 describe('layoutForRound', () => {
   it('cycles A / B / C by round', () => {
     expect([1, 2, 3, 4, 5, 6].map(layoutForRound)).toEqual(['A', 'B', 'C', 'A', 'B', 'C'])
+  })
+})
+
+describe('dispositionCap', () => {
+  it('allows one of each Disposition per 5 players, rounding up', () => {
+    expect([3, 4, 5, 6, 7, 8, 10, 11].map(dispositionCap)).toEqual([1, 1, 1, 2, 2, 2, 2, 3])
   })
 })
 
@@ -505,5 +512,39 @@ describe('helpers', () => {
     const champion = state.matchups.find((m) => m.matchType === 'champion')!
     const updated = recordLayout(state, champion.id, 'B')
     expect(updated.matchups.find((m) => m.id === champion.id)!.layout.value).toBe('A')
+  })
+
+  it('carries each player Force Disposition through to the resolved match-ups', () => {
+    const base = config(3)
+    base.teamA.players[0]!.disposition = 'take-and-hold'
+    base.teamB.players[0]!.disposition = 'purge-the-foe'
+    let state = createPairingState(base)
+    while (state.phase.kind !== 'complete') {
+      switch (state.phase.kind) {
+        case 'defender-select':
+          state = submitDefender(state, remainingPlayers(state, state.phase.team)[0]!.id)
+          break
+        case 'attackers-select': {
+          const t = state.phase.team
+          const def = t === 'A' ? state.draft.defenderA : state.draft.defenderB
+          const atk = remainingPlayers(state, t).filter((p) => p.id !== def)
+          state = submitAttackers(state, [atk[0]!.id, atk[1]!.id])
+          break
+        }
+        case 'counter-select': {
+          const t = state.phase.team
+          const ids = t === 'A' ? state.draft.attackersB : state.draft.attackersA
+          state = submitCounter(state, ids![0]!)
+          break
+        }
+        default:
+          state = proceed(state)
+      }
+    }
+    const withA = state.matchups.find(
+      (m) => m.playerA.id === 'a-0' || m.playerB.id === 'a-0',
+    )!
+    const slotA = withA.playerA.id === 'a-0' ? withA.playerA : withA.playerB
+    expect(slotA.disposition).toBe('take-and-hold')
   })
 })

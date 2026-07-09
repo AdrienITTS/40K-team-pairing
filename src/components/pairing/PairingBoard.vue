@@ -10,13 +10,34 @@ import {
   type PlayerRole,
 } from '../../data/pairing'
 import { factionName } from '../../data/factions'
+import { getDisposition, type Disposition, type DispositionKey } from '../../data/dispositions'
+import DispositionIcon from '../DispositionIcon.vue'
 import RoleIcon from './RoleIcon.vue'
 
 const props = defineProps<{ state: PairingState }>()
 
-const emit = defineEmits<{ layout: [matchupId: string, value: LayoutLetter] }>()
+const emit = defineEmits<{
+  layout: [matchupId: string, value: LayoutLetter]
+  viewLayout: [
+    request: { a: DispositionKey; b: DispositionKey; letter: LayoutLetter; fixed: boolean },
+  ]
+}>()
 
 const layout = computed(() => boardLayout(props.state))
+
+// A layout map is only viewable once both of a match-up's players have a Force
+// Disposition (they're optional in setup) — the pair sets the terrain.
+function dispositionPair(m: Matchup): { a: DispositionKey; b: DispositionKey } | null {
+  const a = m.playerA.disposition
+  const b = m.playerB.disposition
+  return a && b ? { a, b } : null
+}
+
+function viewLayout(m: Matchup) {
+  const pair = dispositionPair(m)
+  if (!pair) return
+  emit('viewLayout', { ...pair, letter: m.layout.value ?? 'A', fixed: m.layout.kind === 'fixed' })
+}
 
 // The two waiting pools rendered side by side; one column each.
 const pools = computed(() => [
@@ -44,6 +65,19 @@ const legend: PlayerRole[] = ['defender', 'attacker', 'refused', 'champion']
 function cellClass(slot: BoardSlot | null): string {
   if (!slot) return 'pending'
   return slot.role ? `role-${slot.role}` : 'role-none'
+}
+
+// A player's Force Disposition (or null), shown as a tinted badge on their cell.
+function disp(slot: BoardSlot | null): Disposition | null {
+  const key = slot?.player.disposition
+  return key ? getDisposition(key) : null
+}
+
+function dispAccent(key: DispositionKey) {
+  return {
+    '--accent': `var(--color-disposition-${key})`,
+    '--accent-tint': `var(--color-disposition-${key}-tint)`,
+  }
 }
 </script>
 
@@ -86,6 +120,14 @@ function cellClass(slot: BoardSlot | null): string {
                 <span v-else class="logo-fallback">·</span>
               </div>
               <span class="cell-name">{{ factionName(row.a.player.faction) }}</span>
+              <span
+                v-if="disp(row.a)"
+                class="disp-badge"
+                :style="dispAccent(disp(row.a)!.key)"
+                :title="disp(row.a)!.name"
+              >
+                <DispositionIcon :symbol="disp(row.a)!.symbol" />
+              </span>
               <RoleIcon v-if="row.a.role" :role="row.a.role" />
             </template>
             <span v-else class="pending-text">pending</span>
@@ -107,6 +149,14 @@ function cellClass(slot: BoardSlot | null): string {
                 <span v-else class="logo-fallback">·</span>
               </div>
               <span class="cell-name">{{ factionName(row.b.player.faction) }}</span>
+              <span
+                v-if="disp(row.b)"
+                class="disp-badge"
+                :style="dispAccent(disp(row.b)!.key)"
+                :title="disp(row.b)!.name"
+              >
+                <DispositionIcon :symbol="disp(row.b)!.symbol" />
+              </span>
               <RoleIcon v-if="row.b.role" :role="row.b.role" />
             </template>
             <span v-else class="pending-text">pending</span>
@@ -135,6 +185,18 @@ function cellClass(slot: BoardSlot | null): string {
               </div>
             </template>
             <span v-else class="layout-fixed">Layout {{ row.matchup.layout.value }}</span>
+            <button
+              v-if="dispositionPair(row.matchup)"
+              type="button"
+              class="row-view"
+              title="View layout"
+              aria-label="View layout"
+              @click="viewLayout(row.matchup)"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5" />
+              </svg>
+            </button>
           </template>
         </div>
       </li>
@@ -157,6 +219,14 @@ function cellClass(slot: BoardSlot | null): string {
               <span v-else class="logo-fallback">·</span>
             </div>
             <span class="cell-name">{{ factionName(slot.player.faction) }}</span>
+            <span
+              v-if="disp(slot)"
+              class="disp-badge"
+              :style="dispAccent(disp(slot)!.key)"
+              :title="disp(slot)!.name"
+            >
+              <DispositionIcon :symbol="disp(slot)!.symbol" />
+            </span>
             <RoleIcon v-if="slot.role" :role="slot.role" />
           </li>
         </ul>
@@ -176,9 +246,10 @@ function cellClass(slot: BoardSlot | null): string {
 
 <style scoped>
 .board {
-  /* Width reserved at the end of each match-up line for its table choice, kept
-     in sync between the rows and the team-heads so columns stay aligned. */
-  --table-col-width: 136px;
+  /* Width reserved at the end of each match-up line for its table choice (and
+     the view-layout button), kept in sync between the rows and the team-heads
+     so columns stay aligned. */
+  --table-col-width: 172px;
   background: var(--color-surface-card);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
@@ -330,6 +401,36 @@ function cellClass(slot: BoardSlot | null): string {
   color: var(--color-muted);
 }
 
+.row-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-canvas);
+  color: var(--color-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.row-view:hover,
+.row-view:focus-visible {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.row-view svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .vs {
   font-size: 12px;
   font-weight: 600;
@@ -396,6 +497,26 @@ function cellClass(slot: BoardSlot | null): string {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+}
+
+/* Force Disposition badge — a tinted square carrying the disposition symbol,
+   sat between the faction name and the pairing-role icon. */
+.disp-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-tint);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.disp-badge :deep(svg) {
+  width: 16px;
+  height: 16px;
 }
 
 .role-defender {

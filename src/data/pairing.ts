@@ -15,6 +15,8 @@
  *   - Champion : the single remaining player on each team plays → 1 consumed.
  */
 
+import type { DispositionKey } from './dispositions'
+
 export type TeamSide = 'A' | 'B'
 
 export type ModuleKind = 'skirmish' | 'main' | 'champion'
@@ -25,6 +27,11 @@ export interface Player {
   id: string
   /** Faction key (matches `public/images/factions/<key>.png`), or null. */
   faction: string | null
+  /**
+   * The player's chosen Force Disposition (see GAME.MD § 1), or null if not
+   * assigned. Both players' Dispositions determine the terrain layouts in play.
+   */
+  disposition?: DispositionKey | null
 }
 
 export interface TeamSetup {
@@ -125,6 +132,15 @@ export function modulesForTeamSize(size: number): ModuleKind[] {
 /** Round 1 → A, round 2 → B, round 3 → C, then the cycle repeats. */
 export function layoutForRound(round: number): LayoutLetter {
   return (['A', 'B', 'C'] as const)[(round - 1) % 3]!
+}
+
+/**
+ * How many players on a team may each select the same Force Disposition
+ * (GAME.MD § 1: "for every 5 players, rounding up, only one player can select
+ * each Force Disposition"). So 3–5 players → 1 each, 6–10 → 2 each, etc.
+ */
+export function dispositionCap(teamSize: number): number {
+  return Math.max(1, Math.ceil(teamSize / 5))
 }
 
 export function moduleLabel(kind: ModuleKind): string {
