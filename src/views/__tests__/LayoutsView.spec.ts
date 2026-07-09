@@ -46,4 +46,19 @@ describe('LayoutsView', () => {
     expect(lb.exists()).toBe(true)
     expect(lb.find('figcaption').text()).toContain('Layout B')
   })
+
+  it('switches the measurement variant from inside the lightbox', async () => {
+    const wrapper = mount(LayoutsView)
+    await wrapper.findAll('.disp-chip')[0]!.trigger('click')
+    await wrapper.findAll('.disp-chip')[1]!.trigger('click')
+    await wrapper.findAll('.map-btn')[0]!.trigger('click')
+
+    const img = () => wrapper.find('.lb-figure img').attributes('src')
+    expect(img()).toBe('/images/layouts/no-measurements/take-and-hold-vs-purge-the-foe-1.png')
+
+    await wrapper.find('.lb-measure').trigger('click')
+    expect(img()).toBe('/images/layouts/with-measurements/take-and-hold-vs-purge-the-foe-1.png')
+    // The grid behind it reflects the same switch.
+    expect(wrapper.find('.map-card img').attributes('src')).toContain('with-measurements')
+  })
 })

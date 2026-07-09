@@ -210,7 +210,17 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         </button>
         <figure class="lb-figure" @click.stop>
           <img :src="maps[lightbox]?.src" :alt="`Layout ${maps[lightbox]?.letter}`" />
-          <figcaption>Layout {{ maps[lightbox]?.letter }} · {{ lightbox + 1 }} / 3</figcaption>
+          <figcaption>
+            <span class="lb-caption-text">Layout {{ maps[lightbox]?.letter }} · {{ lightbox + 1 }} / 3</span>
+            <button
+              type="button"
+              class="lb-measure"
+              :aria-pressed="showMeasurements"
+              @click="showMeasurements = !showMeasurements"
+            >
+              {{ showMeasurements ? 'Hide measurements' : 'Show measurements' }}
+            </button>
+          </figcaption>
         </figure>
         <button
           type="button"
@@ -614,6 +624,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 }
 
 .lb-figure figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+}
+
+.lb-caption-text {
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -622,6 +640,25 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-pill);
   padding: var(--spacing-xxs) var(--spacing-md);
+}
+
+/* Switch the enlarged map between the clean and measurement-annotated art. */
+.lb-measure {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-pill);
+  padding: var(--spacing-xxs) var(--spacing-md);
+  cursor: pointer;
+}
+
+.lb-measure:hover,
+.lb-measure:focus-visible {
+  background: var(--color-primary-active);
+  border-color: var(--color-primary-active);
 }
 
 .lb-arrow {

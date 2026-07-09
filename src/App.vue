@@ -7,13 +7,13 @@ import { useTheme } from './composables/useTheme'
 const { theme, toggleTheme } = useTheme()
 
 // Header dropdown groups. Only one is open at a time.
-type MenuKey = 'teamplay' | 'scoring'
+type MenuKey = 'setup' | 'scoring'
 const route = useRoute()
 const openMenu = ref<MenuKey | null>(null)
 
-const teamplayPaths = ['/pairing', '/how-it-works']
-const scoringPaths = ['/dispositions', '/primaries', '/secondaries', '/layouts']
-const isTeamplayActive = computed(() => teamplayPaths.includes(route.path))
+const setupPaths = ['/dispositions', '/layouts']
+const scoringPaths = ['/primaries', '/secondaries']
+const isSetupActive = computed(() => setupPaths.includes(route.path))
 const isScoringActive = computed(() => scoringPaths.includes(route.path))
 
 function toggleMenu(key: MenuKey) {
@@ -58,21 +58,25 @@ onUnmounted(() => {
       <nav>
         <RouterLink to="/" class="nav-link">Home</RouterLink>
 
+        <RouterLink to="/how-it-works" class="nav-link">Rules</RouterLink>
+
         <div class="nav-group">
           <button
             type="button"
             class="nav-link nav-trigger"
-            :class="{ active: isTeamplayActive || openMenu === 'teamplay' }"
+            :class="{ active: isSetupActive || openMenu === 'setup' }"
             aria-haspopup="true"
-            :aria-expanded="openMenu === 'teamplay'"
-            @click="toggleMenu('teamplay')"
+            :aria-expanded="openMenu === 'setup'"
+            @click="toggleMenu('setup')"
           >
-            Teamplay
+            Setting up
             <svg class="caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
           </button>
-          <div v-if="openMenu === 'teamplay'" class="nav-menu" role="menu">
-            <RouterLink to="/how-it-works" class="nav-menu-item" role="menuitem">Rules</RouterLink>
-            <RouterLink to="/pairing" class="nav-menu-item" role="menuitem">Pairing</RouterLink>
+          <div v-if="openMenu === 'setup'" class="nav-menu" role="menu">
+            <RouterLink to="/dispositions" class="nav-menu-item" role="menuitem">
+              Dispositions
+            </RouterLink>
+            <RouterLink to="/layouts" class="nav-menu-item" role="menuitem">Layouts</RouterLink>
           </div>
         </div>
 
@@ -89,14 +93,10 @@ onUnmounted(() => {
             <svg class="caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
           </button>
           <div v-if="openMenu === 'scoring'" class="nav-menu" role="menu">
-            <RouterLink to="/dispositions" class="nav-menu-item" role="menuitem">
-              Dispositions
-            </RouterLink>
             <RouterLink to="/primaries" class="nav-menu-item" role="menuitem">Primaries</RouterLink>
             <RouterLink to="/secondaries" class="nav-menu-item" role="menuitem">
               Secondaries
             </RouterLink>
-            <RouterLink to="/layouts" class="nav-menu-item" role="menuitem">Layouts</RouterLink>
           </div>
         </div>
 
@@ -205,7 +205,7 @@ nav {
   color: var(--color-ink);
 }
 
-/* Dropdown groups (Teamplay, Scoring) */
+/* Dropdown groups (Setting up, Scoring) */
 .nav-group {
   position: relative;
   display: inline-flex;
