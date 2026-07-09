@@ -43,16 +43,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
                 height="56"
               />
             </div>
-            <div>
+            <div class="modal-head-text">
               <p class="modal-allegiance">{{ faction.allegiance }}</p>
               <h2>{{ faction.name }}</h2>
+              <ul class="chips" aria-label="Competitive profile">
+                <li class="chip">{{ faction.archetype }}</li>
+                <li class="chip">{{ faction.range }}</li>
+                <li class="chip" :class="`consistency-${faction.consistency.toLowerCase()}`">
+                  {{ faction.consistency }}
+                </li>
+              </ul>
             </div>
           </div>
-
-          <section class="modal-section">
-            <h3>Lore</h3>
-            <p>{{ faction.lore }}</p>
-          </section>
 
           <section class="modal-section">
             <h3>Difficulty</h3>
@@ -69,8 +71,39 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           </section>
 
           <section class="modal-section">
-            <h3>Competitive play</h3>
+            <h3>Lore</h3>
+            <p>{{ faction.lore }}</p>
+          </section>
+
+          <section class="modal-section">
+            <h3>How it plays</h3>
             <p>{{ faction.playstyle }}</p>
+          </section>
+
+          <div class="sw-grid">
+            <section class="modal-section">
+              <h3>Strengths</h3>
+              <ul class="trait-list strengths">
+                <li v-for="(item, i) in faction.strengths" :key="i">{{ item }}</li>
+              </ul>
+            </section>
+
+            <section class="modal-section">
+              <h3>Weaknesses</h3>
+              <ul class="trait-list weaknesses">
+                <li v-for="(item, i) in faction.weaknesses" :key="i">{{ item }}</li>
+              </ul>
+            </section>
+          </div>
+
+          <section class="modal-section">
+            <h3>In a team</h3>
+            <p>{{ faction.teamRole }}</p>
+          </section>
+
+          <section class="modal-section pairing-tip">
+            <h3>Blind-pairing tip</h3>
+            <p>{{ faction.pairingTip }}</p>
           </section>
         </div>
       </div>
@@ -158,10 +191,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 .modal-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--spacing-md);
   margin-bottom: var(--spacing-lg);
   padding-right: var(--spacing-xl);
+}
+
+.modal-head-text {
+  min-width: 0;
 }
 
 .modal-logo {
@@ -231,5 +268,97 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 .star.filled {
   color: var(--color-primary);
+}
+
+/* Competitive profile chips under the faction name. */
+.chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xxs);
+  margin-top: var(--spacing-xs);
+}
+
+.chip {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-body-strong);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+  padding: 2px var(--spacing-xs);
+}
+
+/* Consistency chip is colour-coded to the blind-pairing axis: teal = safe to
+   drop blind, amber = feast-or-famine, best counter-picked. */
+.chip.consistency-consistent {
+  color: var(--color-accent-teal);
+  background: var(--color-accent-teal-tint);
+  border-color: var(--color-accent-teal);
+}
+
+.chip.consistency-polarising {
+  color: var(--color-accent-amber);
+  background: var(--color-accent-amber-tint);
+  border-color: var(--color-accent-amber);
+}
+
+/* Strengths / weaknesses sit side by side, collapsing to one column when narrow. */
+.sw-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+}
+
+.sw-grid .modal-section {
+  margin-bottom: 0;
+}
+
+.trait-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.trait-list li {
+  position: relative;
+  padding-left: var(--spacing-md);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--color-body);
+}
+
+.trait-list li::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 700;
+}
+
+.trait-list.strengths li::before {
+  content: '+';
+  color: var(--color-accent-teal);
+}
+
+.trait-list.weaknesses li::before {
+  content: '−';
+  color: var(--color-accent-amber);
+}
+
+/* The blind-pairing tip is the app's raison d'être — give it a coral accent. */
+.pairing-tip {
+  border-left: 3px solid var(--color-primary);
+  padding-left: var(--spacing-md);
+}
+
+@media (max-width: 480px) {
+  .sw-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-lg);
+  }
 }
 </style>

@@ -3,7 +3,8 @@
 A companion web app for **Warhammer 40,000 Teams Events**. It generates fair
 pairings between team members, walks a round through the official mission
 sequence, and tallies VP / BP / TP scoring per the Teams Event rules — plus
-reference views for the faction roster and the full Secondary Mission deck.
+reference views for the faction roster, the Force Disposition cards, and the
+Primary and Secondary Mission decks.
 
 Built with Vue 3 + TypeScript + Vite.
 
@@ -16,6 +17,10 @@ Built with Vue 3 + TypeScript + Vite.
   sequence.
 - **Factions** (`/factions`) — the 27 codices grouped by allegiance, with a
   detail modal per faction.
+- **Force Dispositions** (`/dispositions`) — the five disposition cards and the
+  opponent → Primary Mission table each one resolves to.
+- **Primary Missions** (`/primaries`) — the deck of Primary Missions, indexed by
+  the disposition pairing that selects each one.
 - **Secondary Missions** (`/secondaries`) — the full deck, viewable as the
   printed card image or as structured text, with keyboard-navigable browsing.
 
@@ -70,12 +75,18 @@ npm run test:e2e -- --debug              # debug mode
 ## Project structure
 
 - `src/views/` — routed pages: `HomeView`, `HowItWorksView`, `PairingView`,
-  `FactionsView`, `SecondariesView`.
+  `FactionsView`, `DispositionsView`, `PrimariesView`, `SecondariesView`.
 - `src/components/` — `AppFooter`, `CodeWindowCard`, `FactionModal`,
-  `SecondaryMissionCard`, and the `pairing/` module.
+  `DispositionIcon`, `PrimaryMissionCard`, `SecondaryMissionCard`, and the
+  `pairing/` module.
 - `src/composables/` — `useTheme`, `usePairingSession`.
-- `src/data/` — `factions.ts`, `pairing.ts`, `secondaries.ts`.
-- `public/images/` — app art and faction logos (served from the root).
+- `src/data/` — `factions.ts`, `pairing.ts`, `dispositions.ts`, `primaries.ts`
+  (+ `primaries.content.ts`), `secondaries.ts`.
+- `public/images/` — app art, faction logos, and the disposition / primary /
+  secondary card art (all served from the root).
+
+State is kept local to components and composables — there is no Pinia/global
+store — so `main.ts` registers only Vue Router.
 
 Reference docs at the repo root: `DESIGN.md` (styling), `GAME.MD` (rules), and
 `AGENTS.md` (guidance for AI coding agents).

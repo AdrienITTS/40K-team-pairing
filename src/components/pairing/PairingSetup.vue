@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import type { Allegiance } from '../../data/factions'
 import { allegiances } from '../../data/factions'
 import {
   MAX_TEAM_SIZE,
@@ -24,12 +25,12 @@ const factionsB = ref<string[]>([])
 
 const sizes = Array.from({ length: MAX_TEAM_SIZE - MIN_TEAM_SIZE + 1 }, (_, i) => MIN_TEAM_SIZE + i)
 
-const sortedAllegiances = computed(() =>
-  allegiances.map((a) => ({
-    ...a,
-    factions: [...a.factions].sort((x, y) => x.name.localeCompare(y.name)),
-  })),
-)
+// The allegiance roster is static, so sort it once at module load rather than
+// per component instance.
+const sortedAllegiances: Allegiance[] = allegiances.map((a) => ({
+  ...a,
+  factions: [...a.factions].sort((x, y) => x.name.localeCompare(y.name)),
+}))
 
 const moduleSummary = computed(() =>
   modulesForTeamSize(teamSize.value).map(moduleLabel).join(' → '),

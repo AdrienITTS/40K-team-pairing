@@ -18,6 +18,12 @@ const emit = defineEmits<{ layout: [matchupId: string, value: LayoutLetter] }>()
 
 const layout = computed(() => boardLayout(props.state))
 
+// The two waiting pools rendered side by side; one column each.
+const pools = computed(() => [
+  { side: 'A', slots: layout.value.poolA },
+  { side: 'B', slots: layout.value.poolB },
+])
+
 const layouts: LayoutLetter[] = ['A', 'B', 'C']
 
 // Guarded so the template can pass a possibly-undefined row match-up directly.
@@ -137,35 +143,8 @@ function cellClass(slot: BoardSlot | null): string {
     <div v-if="layout.poolA.length || layout.poolB.length" class="pool">
       <p class="pool-label">Waiting</p>
       <div class="pool-columns">
-        <ul class="pool-col">
-          <li
-            v-for="slot in layout.poolA"
-            :key="slot.player.id"
-            class="chip"
-            :class="cellClass(slot)"
-          >
-            <div class="logo-tile">
-              <img
-                v-if="slot.player.faction"
-                :src="`/images/factions/${slot.player.faction}.png`"
-                :alt="slot.player.faction"
-                width="24"
-                height="24"
-                loading="lazy"
-              />
-              <span v-else class="logo-fallback">·</span>
-            </div>
-            <span class="cell-name">{{ factionName(slot.player.faction) }}</span>
-            <RoleIcon v-if="slot.role" :role="slot.role" />
-          </li>
-        </ul>
-        <ul class="pool-col">
-          <li
-            v-for="slot in layout.poolB"
-            :key="slot.player.id"
-            class="chip"
-            :class="cellClass(slot)"
-          >
+        <ul v-for="pool in pools" :key="pool.side" class="pool-col">
+          <li v-for="slot in pool.slots" :key="slot.player.id" class="chip" :class="cellClass(slot)">
             <div class="logo-tile">
               <img
                 v-if="slot.player.faction"
