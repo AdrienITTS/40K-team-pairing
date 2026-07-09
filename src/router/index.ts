@@ -53,6 +53,23 @@ const router = createRouter({
   // browser back/forward.
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) return savedPosition
+    // Deep links to a chapter (e.g. the home page's feature cards → a specific
+    // "How it works" section) scroll that element into view instead of the top.
+    // The target view is lazily loaded, so wait a few frames for it to render
+    // the anchor before resolving, otherwise the scroll finds nothing.
+    if (to.hash) {
+      return new Promise((resolve) => {
+        let frames = 0
+        const wait = () => {
+          if (document.querySelector(to.hash) || frames++ > 30) {
+            resolve({ el: to.hash, behavior: 'smooth' })
+          } else {
+            requestAnimationFrame(wait)
+          }
+        }
+        requestAnimationFrame(wait)
+      })
+    }
     return { top: 0, behavior: 'smooth' }
   },
 })

@@ -167,7 +167,7 @@ Loser Battle Points     <span class="highlight">4</span>`
       </div>
     </section>
 
-    <section class="block">
+    <section id="play-the-battle" class="block">
       <h2><span class="step">3</span>Play the battle</h2>
       <ul class="rules-list">
         <li>
@@ -192,7 +192,7 @@ Loser Battle Points     <span class="highlight">4</span>`
       </ul>
     </section>
 
-    <section class="block">
+    <section id="score-the-game" class="block">
       <h2><span class="step">4</span>Score the game</h2>
       <p>
         A player's total VP is capped per source. Anything scored above these caps is ignored, and
@@ -273,7 +273,7 @@ Loser Battle Points     <span class="highlight">4</span>`
       </p>
     </section>
 
-    <section class="block">
+    <section id="tournament-rankings" class="block">
       <h2><span class="step">5</span>Tournament pairings &amp; rankings</h2>
       <p>
         Round one is usually random. After that, teams are paired first by Team Points, then by
@@ -311,6 +311,8 @@ Loser Battle Points     <span class="highlight">4</span>`
 
 .block {
   margin-bottom: var(--spacing-xxl);
+  /* Breathing room when a home-page feature card deep-links to this chapter. */
+  scroll-margin-top: var(--spacing-xl);
 }
 
 .block h2 {
