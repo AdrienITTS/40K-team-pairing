@@ -19,7 +19,7 @@ import { RouterLink } from 'vue-router'
 
         <nav>
           <RouterLink to="/">Home</RouterLink>
-          <RouterLink to="/how-it-works">How It Works</RouterLink>
+          <RouterLink to="/how-it-works">Rules</RouterLink>
         </nav>
       </div>
 

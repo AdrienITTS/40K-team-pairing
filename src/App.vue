@@ -1,9 +1,45 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { RouterLink, RouterView, useRoute } from 'vue-router'
 import AppFooter from './components/AppFooter.vue'
 import { useTheme } from './composables/useTheme'
 
 const { theme, toggleTheme } = useTheme()
+
+// Header dropdown groups. Only one is open at a time.
+type MenuKey = 'teamplay' | 'scoring'
+const route = useRoute()
+const openMenu = ref<MenuKey | null>(null)
+
+const teamplayPaths = ['/pairing', '/how-it-works']
+const scoringPaths = ['/dispositions', '/primaries', '/secondaries']
+const isTeamplayActive = computed(() => teamplayPaths.includes(route.path))
+const isScoringActive = computed(() => scoringPaths.includes(route.path))
+
+function toggleMenu(key: MenuKey) {
+  openMenu.value = openMenu.value === key ? null : key
+}
+function closeMenus() {
+  openMenu.value = null
+}
+
+// Close on navigation, on Escape, and on any click outside a nav group.
+watch(() => route.path, closeMenus)
+function onDocClick(e: MouseEvent) {
+  const el = e.target as HTMLElement | null
+  if (!el?.closest('.nav-group')) closeMenus()
+}
+function onKey(e: KeyboardEvent) {
+  if (e.key === 'Escape') closeMenus()
+}
+onMounted(() => {
+  document.addEventListener('click', onDocClick)
+  document.addEventListener('keydown', onKey)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick)
+  document.removeEventListener('keydown', onKey)
+})
 </script>
 
 <template>
@@ -21,10 +57,49 @@ const { theme, toggleTheme } = useTheme()
 
       <nav>
         <RouterLink to="/" class="nav-link">Home</RouterLink>
-        <RouterLink to="/pairing" class="nav-link">Pairing</RouterLink>
+
+        <div class="nav-group">
+          <button
+            type="button"
+            class="nav-link nav-trigger"
+            :class="{ active: isTeamplayActive || openMenu === 'teamplay' }"
+            aria-haspopup="true"
+            :aria-expanded="openMenu === 'teamplay'"
+            @click="toggleMenu('teamplay')"
+          >
+            Teamplay
+            <svg class="caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+          <div v-if="openMenu === 'teamplay'" class="nav-menu" role="menu">
+            <RouterLink to="/how-it-works" class="nav-menu-item" role="menuitem">Rules</RouterLink>
+            <RouterLink to="/pairing" class="nav-menu-item" role="menuitem">Pairing</RouterLink>
+          </div>
+        </div>
+
+        <div class="nav-group">
+          <button
+            type="button"
+            class="nav-link nav-trigger"
+            :class="{ active: isScoringActive || openMenu === 'scoring' }"
+            aria-haspopup="true"
+            :aria-expanded="openMenu === 'scoring'"
+            @click="toggleMenu('scoring')"
+          >
+            Scoring
+            <svg class="caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+          </button>
+          <div v-if="openMenu === 'scoring'" class="nav-menu" role="menu">
+            <RouterLink to="/dispositions" class="nav-menu-item" role="menuitem">
+              Dispositions
+            </RouterLink>
+            <RouterLink to="/primaries" class="nav-menu-item" role="menuitem">Primaries</RouterLink>
+            <RouterLink to="/secondaries" class="nav-menu-item" role="menuitem">
+              Secondaries
+            </RouterLink>
+          </div>
+        </div>
+
         <RouterLink to="/factions" class="nav-link">Factions</RouterLink>
-        <RouterLink to="/secondaries" class="nav-link">Secondaries</RouterLink>
-        <RouterLink to="/how-it-works" class="nav-link">How It Works</RouterLink>
       </nav>
 
       <div class="header-actions">
@@ -126,6 +201,78 @@ nav {
 
 .nav-link.router-link-exact-active {
   background: var(--color-surface-card);
+  color: var(--color-ink);
+}
+
+/* Dropdown groups (Teamplay, Scoring) */
+.nav-group {
+  position: relative;
+  display: inline-flex;
+}
+
+.nav-trigger {
+  gap: 4px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.nav-trigger.active {
+  background: var(--color-surface-card);
+  color: var(--color-ink);
+}
+
+.caret {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.15s ease;
+}
+
+.nav-trigger[aria-expanded='true'] .caret {
+  transform: rotate(180deg);
+}
+
+.nav-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  min-width: 172px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--spacing-xxs);
+  background: var(--color-surface-card);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+}
+
+.nav-menu-item {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.nav-menu-item:hover {
+  background: var(--color-surface-soft);
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.nav-menu-item.router-link-exact-active {
+  background: var(--color-surface-soft);
   color: var(--color-ink);
 }
 

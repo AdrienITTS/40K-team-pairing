@@ -345,6 +345,17 @@ Team identity on the board reuses the existing `{colors.accent-teal}` (Team A) a
 - **Role · Champion** (`{colors.role-champion}` — #b0862f): pairing-board role badge (crown), the warm gold counterpart to the cool defender token.
 - Each of the four tokens above has a matching `-tint` variant (e.g. `{colors.role-defender-tint}`) — a low-alpha wash (0.14 light / 0.18 dark) used as the badge background, with the solid color reserved for the icon.
 
+### Force Dispositions
+
+Like the role badges, these are **small per-stance accent tokens**, not surfaces or brand voltage — each is confined to a disposition's symbol glyph, its card accent-stripe, and matrix chips on the Dispositions page. The five hues are sampled from the source card art (gdmissions 11th-edition Force Disposition cards) and brightened for the dark canvas, mirroring the role-badge light/dark treatment.
+
+- **Disposition · Take and Hold** (`{colors.disposition-take-and-hold}` — #286848 light / #5aa17e dark): green, keep symbol.
+- **Disposition · Purge the Foe** (`{colors.disposition-purge-the-foe}` — #882828 light / #d1665f dark): red, sword symbol.
+- **Disposition · Disruption** (`{colors.disposition-disruption}` — #184888 light / #6f9ede dark): blue, bomb symbol.
+- **Disposition · Reconnaissance** (`{colors.disposition-reconnaissance}` — #187880 light / #4fb3bc dark): teal, eye symbol.
+- **Disposition · Priority Assets** (`{colors.disposition-priority-assets}` — #a07810 light / #d0a53e dark): amber, navigation-arrow symbol.
+- Each has a matching `-tint` variant (0.14 light / 0.18 dark) used as the symbol-badge and chip background, with the solid color reserved for the glyph. Components reference these as `var(--color-disposition-<key>)` via an inline custom-property binding rather than hardcoding the hex.
+
 ### Surface
 
 - **Canvas** (`{colors.canvas}` — #faf9f5): The default page floor. Tinted cream — warm, deliberately not pure white.

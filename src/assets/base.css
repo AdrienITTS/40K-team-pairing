@@ -38,6 +38,17 @@
   --color-role-refused-tint: rgba(138, 90, 168, 0.14);
   --color-role-champion: #b0862f;
   --color-role-champion-tint: rgba(176, 134, 47, 0.14);
+  /* Force Dispositions — accent per stance, sampled from the card art */
+  --color-disposition-take-and-hold: #286848;
+  --color-disposition-take-and-hold-tint: rgba(40, 104, 72, 0.14);
+  --color-disposition-purge-the-foe: #882828;
+  --color-disposition-purge-the-foe-tint: rgba(136, 40, 40, 0.14);
+  --color-disposition-disruption: #184888;
+  --color-disposition-disruption-tint: rgba(24, 72, 136, 0.14);
+  --color-disposition-reconnaissance: #187880;
+  --color-disposition-reconnaissance-tint: rgba(24, 120, 128, 0.14);
+  --color-disposition-priority-assets: #a07810;
+  --color-disposition-priority-assets-tint: rgba(160, 120, 16, 0.14);
   --color-success: #5db872;
   --color-warning: #d4a017;
   --color-error: #c64545;
@@ -119,6 +130,17 @@
   --color-role-refused-tint: rgba(180, 137, 207, 0.18);
   --color-role-champion: #d8b45f;
   --color-role-champion-tint: rgba(216, 180, 95, 0.18);
+  /* Force Dispositions — brightened for the dark canvas */
+  --color-disposition-take-and-hold: #5aa17e;
+  --color-disposition-take-and-hold-tint: rgba(90, 161, 126, 0.18);
+  --color-disposition-purge-the-foe: #d1665f;
+  --color-disposition-purge-the-foe-tint: rgba(209, 102, 95, 0.18);
+  --color-disposition-disruption: #6f9ede;
+  --color-disposition-disruption-tint: rgba(111, 158, 222, 0.18);
+  --color-disposition-reconnaissance: #4fb3bc;
+  --color-disposition-reconnaissance-tint: rgba(79, 179, 188, 0.18);
+  --color-disposition-priority-assets: #d0a53e;
+  --color-disposition-priority-assets-tint: rgba(208, 165, 62, 0.18);
   --color-success: #7fd08f;
   --color-warning: #e8c168;
   --color-error: #e0716a;
