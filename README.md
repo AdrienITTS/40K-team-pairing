@@ -23,6 +23,9 @@ Built with Vue 3 + TypeScript + Vite.
   the disposition pairing that selects each one.
 - **Secondary Missions** (`/secondaries`) — the full deck, viewable as the
   printed card image or as structured text, with keyboard-navigable browsing.
+- **Deployment Layouts** (`/layouts`) — a 3-step picker (your Disposition, your
+  opponent's, then the maps) that shows the three A/B/C terrain layouts for that
+  pairing, with a measurements toggle and a click-to-zoom lightbox.
 
 The domain logic (pairing modules, the VP→BP conversion table, win/draw
 thresholds, and Team Point scoring) follows `GAME.MD`, the bundled Teams Event
@@ -75,15 +78,16 @@ npm run test:e2e -- --debug              # debug mode
 ## Project structure
 
 - `src/views/` — routed pages: `HomeView`, `HowItWorksView`, `PairingView`,
-  `FactionsView`, `DispositionsView`, `PrimariesView`, `SecondariesView`.
+  `FactionsView`, `DispositionsView`, `PrimariesView`, `SecondariesView`,
+  `LayoutsView`.
 - `src/components/` — `AppFooter`, `CodeWindowCard`, `FactionModal`,
   `DispositionIcon`, `PrimaryMissionCard`, `SecondaryMissionCard`, and the
   `pairing/` module.
 - `src/composables/` — `useTheme`, `usePairingSession`.
 - `src/data/` — `factions.ts`, `pairing.ts`, `dispositions.ts`, `primaries.ts`
-  (+ `primaries.content.ts`), `secondaries.ts`.
-- `public/images/` — app art, faction logos, and the disposition / primary /
-  secondary card art (all served from the root).
+  (+ `primaries.content.ts`), `secondaries.ts`, `layouts.ts`.
+- `public/images/` — app art, faction logos, the disposition / primary /
+  secondary card art, and the deployment-layout maps (all served from the root).
 
 State is kept local to components and composables — there is no Pinia/global
 store — so `main.ts` registers only Vue Router.

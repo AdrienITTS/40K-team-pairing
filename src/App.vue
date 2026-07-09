@@ -12,7 +12,7 @@ const route = useRoute()
 const openMenu = ref<MenuKey | null>(null)
 
 const teamplayPaths = ['/pairing', '/how-it-works']
-const scoringPaths = ['/dispositions', '/primaries', '/secondaries']
+const scoringPaths = ['/dispositions', '/primaries', '/secondaries', '/layouts']
 const isTeamplayActive = computed(() => teamplayPaths.includes(route.path))
 const isScoringActive = computed(() => scoringPaths.includes(route.path))
 
@@ -96,6 +96,7 @@ onUnmounted(() => {
             <RouterLink to="/secondaries" class="nav-menu-item" role="menuitem">
               Secondaries
             </RouterLink>
+            <RouterLink to="/layouts" class="nav-menu-item" role="menuitem">Layouts</RouterLink>
           </div>
         </div>
 
