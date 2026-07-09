@@ -40,6 +40,13 @@ export function usePairingSession() {
     state.value = null
   }
 
+  // Re-run the live pairing from scratch while keeping the same rosters and
+  // round config. The config on the state is never mutated during a run, so
+  // feeding it back to `start` yields an identical fresh state.
+  function restart() {
+    if (state.value) start(state.value.config)
+  }
+
   function defender(id: string) {
     if (state.value) state.value = settle(submitDefender(state.value, id))
   }
@@ -60,5 +67,5 @@ export function usePairingSession() {
     if (state.value) state.value = recordLayout(state.value, matchupId, value)
   }
 
-  return { state, start, reset, defender, attackers, counter, next, layout }
+  return { state, start, reset, restart, defender, attackers, counter, next, layout }
 }

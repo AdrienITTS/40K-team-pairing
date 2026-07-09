@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { allegiances, factionName, type FactionInfo } from '../factions'
+import {
+  allegiances,
+  factionName,
+  isSpaceMarine,
+  SPACE_MARINE_KEYS,
+  type FactionInfo,
+} from '../factions'
 
 const factions: FactionInfo[] = allegiances.flatMap((a) => a.factions)
 
@@ -36,5 +42,25 @@ describe('faction data', () => {
     expect(factionName('world_eaters')).toBe('World Eaters')
     expect(factionName('not-a-key')).toBe('not-a-key')
     expect(factionName(null)).toBe('—')
+  })
+
+  it('groups exactly the six Space Marine Chapters (Grey Knights excluded)', () => {
+    expect([...SPACE_MARINE_KEYS].sort()).toEqual(
+      [
+        'black_templars',
+        'blood_angels',
+        'dark_angels',
+        'deathwatch',
+        'space_marines',
+        'space_wolves',
+      ].sort(),
+    )
+    // Grey Knights and Custodes are Imperium but not part of the group.
+    expect(isSpaceMarine('grey_knights')).toBe(false)
+    expect(isSpaceMarine('adeptus_custodes')).toBe(false)
+    expect(isSpaceMarine('necrons')).toBe(false)
+    // Every grouped key is a real faction.
+    const keys = new Set(factions.map((f) => f.key))
+    for (const k of SPACE_MARINE_KEYS) expect(keys.has(k)).toBe(true)
   })
 })

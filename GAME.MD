@@ -33,6 +33,8 @@ Each team should have a single captain who is responsible for ensuring that play
 
 Within each team, only one player can use units with a given faction keyword. This will normally mean that only one player can use units from each Codex, including as allied forces. This does not apply to cases where the ally rules being used change faction keywords, or where datasheets appear in multiple Codexes with different faction keywords (e.g. Chaos Daemons and Khorne Daemons in Codex: World Eaters).
 
+In addition, within each team only one player can use a Space Marine army. Because they share the Adeptus Astartes identity, the Space Marine Chapters — Space Marines, Black Templars, Blood Angels, Dark Angels, Space Wolves and Deathwatch — are treated as a single group for this purpose, so a roster may include at most one of them. Grey Knights are a separate army and are not counted among these.
+
 Each player then musters an army as described in the Warhammer 40,000 app, with the following exception: once they have mustered their army, a player selects one Force Disposition card available to them and records that on their roster.
 
 Within each team, for every 5 players (rounding up), only one player can select each Force Disposition.

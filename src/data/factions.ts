@@ -786,3 +786,23 @@ export function factionName(key: string | null): string {
   if (!key) return '—'
   return factionNamesByKey.get(key) ?? key
 }
+
+/**
+ * The Space Marine Chapters, which share the Adeptus Astartes identity for team
+ * composition. Beyond the general one-player-per-faction-keyword rule, a roster
+ * may include at most ONE of these (see GAME.MD § 1). Grey Knights are a
+ * separate army and are deliberately not counted among them.
+ */
+export const SPACE_MARINE_KEYS: ReadonlySet<string> = new Set([
+  'space_marines',
+  'black_templars',
+  'blood_angels',
+  'dark_angels',
+  'space_wolves',
+  'deathwatch',
+])
+
+/** Whether a faction key belongs to the once-per-roster Space Marine group. */
+export function isSpaceMarine(key: string): boolean {
+  return SPACE_MARINE_KEYS.has(key)
+}

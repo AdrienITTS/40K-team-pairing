@@ -83,7 +83,10 @@ function onLayout(matchupId: string, value: LayoutLetter) {
             fixed layouts use Layout {{ layoutForRound(state.config.round) }} this round
           </p>
         </div>
-        <button type="button" class="btn-secondary" @click="session.reset">New pairing →</button>
+        <div class="results-actions">
+          <button type="button" class="btn-secondary" @click="session.reset">Change rosters</button>
+          <button type="button" class="btn-primary" @click="session.restart">New pairing →</button>
+        </div>
       </div>
 
       <div class="results-grid">
@@ -241,6 +244,15 @@ function onLayout(matchupId: string, value: LayoutLetter) {
   font-size: 14px;
   color: var(--color-muted);
   margin-top: 4px;
+}
+
+/* "Change rosters" (back to setup) sits beside the primary "New pairing"
+   (same rosters, fresh live pairing). */
+.results-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
 }
 
 /* Two match-ups per row so the whole round fits the screen without scrolling.

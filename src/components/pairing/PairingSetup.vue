@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import type { Allegiance } from '../../data/factions'
-import { allegiances } from '../../data/factions'
+import { allegiances, isSpaceMarine } from '../../data/factions'
 import {
   MAX_TEAM_SIZE,
   MIN_TEAM_SIZE,
@@ -49,11 +49,23 @@ watch(teamSize, (size) => {
   factionsB.value = factionsB.value.slice(0, size)
 })
 
+// A roster may hold at most one Space Marine Chapter (GAME.MD § 1), so once one
+// is picked the other Chapters are locked out for that team.
+function marineLocked(list: string[], key: string): boolean {
+  return isSpaceMarine(key) && list.some(isSpaceMarine)
+}
+
+function chipDisabled(side: 'A' | 'B', key: string): boolean {
+  const list = side === 'A' ? factionsA.value : factionsB.value
+  if (list.includes(key)) return false
+  return list.length >= teamSize.value || marineLocked(list, key)
+}
+
 function toggleFaction(side: 'A' | 'B', key: string) {
   const list = side === 'A' ? factionsA : factionsB
   if (list.value.includes(key)) {
     list.value = list.value.filter((k) => k !== key)
-  } else if (list.value.length < teamSize.value) {
+  } else if (list.value.length < teamSize.value && !marineLocked(list.value, key)) {
     list.value = [...list.value, key]
   }
 }
@@ -146,6 +158,7 @@ function submit() {
         <h2 class="picker-title">Pick {{ teamAName }}'s armies</h2>
         <span class="picker-count">{{ factionsA.length }} / {{ teamSize }} selected</span>
       </div>
+      <p class="picker-rule">One army per faction keyword, and only one Space Marine Chapter per team.</p>
 
       <div class="allegiance-groups">
         <div v-for="a in sortedAllegiances" :key="a.id" class="allegiance-group">
@@ -157,7 +170,7 @@ function submit() {
               type="button"
               class="faction-chip side-a"
               :class="{ selected: factionsA.includes(f.key) }"
-              :disabled="!factionsA.includes(f.key) && factionsA.length >= teamSize"
+              :disabled="chipDisabled('A', f.key)"
               @click="toggleFaction('A', f.key)"
             >
               <span class="chip-tile">
@@ -194,6 +207,7 @@ function submit() {
         <h2 class="picker-title">Pick {{ teamBName }}'s armies</h2>
         <span class="picker-count">{{ factionsB.length }} / {{ teamSize }} selected</span>
       </div>
+      <p class="picker-rule">One army per faction keyword, and only one Space Marine Chapter per team.</p>
 
       <div class="allegiance-groups">
         <div v-for="a in sortedAllegiances" :key="a.id" class="allegiance-group">
@@ -205,7 +219,7 @@ function submit() {
               type="button"
               class="faction-chip side-b"
               :class="{ selected: factionsB.includes(f.key) }"
-              :disabled="!factionsB.includes(f.key) && factionsB.length >= teamSize"
+              :disabled="chipDisabled('B', f.key)"
               @click="toggleFaction('B', f.key)"
             >
               <span class="chip-tile">
@@ -425,6 +439,12 @@ function submit() {
 .picker-count {
   font-size: 13px;
   font-weight: 500;
+  color: var(--color-muted);
+}
+
+.picker-rule {
+  margin-top: var(--spacing-xs);
+  font-size: 13px;
   color: var(--color-muted);
 }
 
