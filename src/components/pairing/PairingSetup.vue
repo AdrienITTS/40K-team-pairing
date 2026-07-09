@@ -11,7 +11,9 @@ import {
 
 const emit = defineEmits<{ start: [config: PairingConfig] }>()
 
-const step = ref<1 | 2 | 3>(1)
+// Exposed so the page can react to the wizard step (e.g. hide the intro copy
+// once the user is deep in army selection).
+const step = defineModel<1 | 2 | 3>('step', { default: 1 })
 
 const round = ref(1)
 const teamSize = ref(4)
@@ -79,7 +81,8 @@ function submit() {
       <li :class="{ active: step === 3 }">3 · {{ teamBName || 'Team B' }}</li>
     </ol>
 
-    <section v-if="step === 1" class="step">
+    <Transition name="step" mode="out-in">
+    <section v-if="step === 1" key="step-1" class="step">
       <div class="event-row">
         <label class="field size-field">
           <span class="field-label">Players per team</span>
@@ -137,7 +140,7 @@ function submit() {
       </div>
     </section>
 
-    <section v-else-if="step === 2" class="step">
+    <section v-else-if="step === 2" key="step-2" class="step">
       <div class="picker-head">
         <h2 class="picker-title">Pick {{ teamAName }}'s armies</h2>
         <span class="picker-count">{{ factionsA.length }} / {{ teamSize }} selected</span>
@@ -185,7 +188,7 @@ function submit() {
       </div>
     </section>
 
-    <section v-else class="step">
+    <section v-else key="step-3" class="step">
       <div class="picker-head">
         <h2 class="picker-title">Pick {{ teamBName }}'s armies</h2>
         <span class="picker-count">{{ factionsB.length }} / {{ teamSize }} selected</span>
@@ -227,6 +230,7 @@ function submit() {
         </button>
       </div>
     </section>
+    </Transition>
   </form>
 </template>
 
@@ -234,36 +238,79 @@ function submit() {
 .setup {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
 }
 
 .stepper {
   list-style: none;
   display: flex;
-  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+  gap: var(--spacing-md);
   font-size: 13px;
   font-weight: 500;
   color: var(--color-muted-soft);
 }
 
+.stepper li {
+  padding-bottom: var(--spacing-xxs);
+  border-bottom: 2px solid transparent;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+/* Tie the active step to the app's coral accent so the breadcrumb reads as
+   part of the theme rather than plain grey text. */
 .stepper li.active {
-  color: var(--color-ink);
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: 600;
 }
 
 .stepper li.done {
   color: var(--color-muted);
 }
 
+/* Wizard step swap: slide + fade between the round / team-A / team-B panes. */
+.step-enter-active,
+.step-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.step-enter-from {
+  opacity: 0;
+  transform: translateX(16px);
+}
+
+.step-leave-to {
+  opacity: 0;
+  transform: translateX(-16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-enter-active,
+  .step-leave-active {
+    transition: none;
+  }
+
+  .step-enter-from,
+  .step-leave-to {
+    transform: none;
+  }
+}
+
 .step {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
 }
 
 .event-row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xl);
+  gap: var(--spacing-lg);
   align-items: flex-end;
 }
 
@@ -344,12 +391,12 @@ function submit() {
 .teams {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
 }
 
 .team-name {
-  height: 44px;
-  font-size: 16px;
+  height: 40px;
+  font-size: 15px;
   font-weight: 500;
   border-width: 1px;
   border-left-width: 3px;
@@ -371,7 +418,7 @@ function submit() {
 }
 
 .picker-title {
-  font-size: 20px;
+  font-size: 17px;
 }
 
 .picker-count {
@@ -383,24 +430,24 @@ function submit() {
 .allegiance-groups {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
 }
 
 .allegiance-group {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
 }
 
 .allegiance-title {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--color-body-strong);
 }
 
 .chip-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: var(--spacing-sm);
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: var(--spacing-xs);
 }
 
 .faction-chip {
@@ -452,13 +499,19 @@ function submit() {
   object-fit: contain;
 }
 
+/* Wrap to two lines instead of truncating, so no faction name is cropped. */
 .chip-name {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
   font-weight: 500;
+  line-height: 1.2;
   color: var(--color-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .chip-check {

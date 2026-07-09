@@ -33,6 +33,13 @@ const router = createRouter({
       component: () => import('../views/SecondariesView.vue'),
     },
   ],
+  // Smoothly return to the top on every navigation (e.g. the home page's
+  // redirecting buttons/links), while preserving the saved position on
+  // browser back/forward.
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    return { top: 0, behavior: 'smooth' }
+  },
 })
 
 export default router

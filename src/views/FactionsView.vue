@@ -51,7 +51,7 @@ function closeFaction() {
       </ul>
     </section>
 
-    <FactionModal v-if="selectedFaction" :faction="selectedFaction" @close="closeFaction" />
+    <FactionModal :faction="selectedFaction" @close="closeFaction" />
   </main>
 </template>
 
@@ -127,11 +127,28 @@ function closeFaction() {
   padding: var(--spacing-md);
   text-align: left;
   cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .faction-card:hover,
 .faction-card:focus-visible {
   background: var(--color-surface-strong);
+  border-color: var(--color-primary);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .faction-card {
+    transition: none;
+  }
+
+  .faction-card:hover,
+  .faction-card:focus-visible {
+    transform: none;
+  }
 }
 
 .logo-tile {

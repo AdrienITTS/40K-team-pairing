@@ -33,14 +33,35 @@ function onKey(e: KeyboardEvent) {
   else if (e.key === 'ArrowRight') go(1)
 }
 
-// Text mode: pin the card to the height of the tallest secondary so switching
-// missions never resizes it. A hidden stack renders every mission at the live
-// width; we take the max rendered height and apply it as a min-height.
+// Both views are sized to fit the viewport so the page never needs to scroll.
+// `availableHeight` is the space from the top of the card stage down to a small
+// bottom margin; the image is scaled to it, and the text card is capped by it.
+const stage = ref<HTMLElement | null>(null)
 const measurer = ref<HTMLElement | null>(null)
-const textMinHeight = ref<number | null>(null)
-const textCardStyle = computed(() =>
-  textMinHeight.value ? { minHeight: `${textMinHeight.value}px` } : {},
+const tallestText = ref<number | null>(null)
+const availableHeight = ref<number | null>(null)
+
+// The text card is pinned to the tallest secondary (so switching never resizes
+// it) but never taller than the viewport; if a card can't fit it scrolls in
+// place rather than pushing the page.
+const textCardStyle = computed(() => {
+  const avail = availableHeight.value
+  if (!avail) return {}
+  const h = tallestText.value ? Math.min(tallestText.value, avail) : avail
+  return { height: `${h}px`, overflowY: 'auto' }
+})
+
+// The image fills the available height (minus the card's frame padding/border).
+const imageStyle = computed(() =>
+  availableHeight.value ? { height: `${availableHeight.value - 34}px` } : {},
 )
+
+function measureAvailable() {
+  const el = stage.value
+  if (!el) return
+  const top = el.getBoundingClientRect().top
+  availableHeight.value = Math.max(260, Math.round(window.innerHeight - top - 32))
+}
 
 function measureText() {
   const el = measurer.value
@@ -49,33 +70,37 @@ function measureText() {
   for (const child of Array.from(el.children)) {
     max = Math.max(max, (child as HTMLElement).offsetHeight)
   }
-  textMinHeight.value = max > 0 ? max : null
+  tallestText.value = max > 0 ? max : null
 }
 
-watch(view, async (v) => {
-  if (v !== 'text') return
-  await nextTick()
-  measureText()
-  // Re-measure once web fonts load, since metrics can shift the tallest card.
-  document.fonts?.ready.then(measureText)
-})
-
-function onResize() {
+function remeasure() {
+  measureAvailable()
   if (view.value === 'text') measureText()
 }
 
+// Re-measure whenever the layout that drives the fit changes: view toggled, a
+// card selected (the hero shrinks), or the window resized. Fonts can shift the
+// tallest card, so re-run once they're ready too.
+watch([view, current], async () => {
+  await nextTick()
+  remeasure()
+  document.fonts?.ready.then(remeasure)
+})
+
 onMounted(() => {
   window.addEventListener('keydown', onKey)
-  window.addEventListener('resize', onResize)
+  window.addEventListener('resize', remeasure)
+  nextTick(remeasure)
+  document.fonts?.ready.then(remeasure)
 })
 onUnmounted(() => {
   window.removeEventListener('keydown', onKey)
-  window.removeEventListener('resize', onResize)
+  window.removeEventListener('resize', remeasure)
 })
 </script>
 
 <template>
-  <main class="secondaries">
+  <main class="secondaries" :class="{ 'is-detail': current }">
     <section class="hero">
       <p class="badge-pill">Warhammer 40,000 · Teams Event</p>
       <div class="hero-head">
@@ -94,7 +119,8 @@ onUnmounted(() => {
       </p>
     </section>
 
-    <ul v-if="!current" class="mosaic" aria-label="Select a secondary mission">
+    <Transition name="list" mode="out-in" @after-enter="remeasure">
+    <ul v-if="!current" key="list" class="mosaic" aria-label="Select a secondary mission">
       <li v-for="(m, i) in secondaryMissions" :key="m.key">
         <button type="button" class="mosaic-chip" @click="select(i)">
           {{ m.name }}
@@ -104,6 +130,7 @@ onUnmounted(() => {
 
     <section
       v-else
+      key="detail"
       class="carousel"
       aria-roledescription="carousel"
       aria-label="Secondary missions"
@@ -122,16 +149,19 @@ onUnmounted(() => {
           </button>
         </nav>
 
-        <div class="stage">
-          <figure v-if="view === 'image'" class="card-image">
-            <img
-              :src="`/images/secondaries/${current.key}.png`"
-              :alt="`${current.name} secondary mission card`"
-              loading="lazy"
-            />
-          </figure>
+        <div ref="stage" class="stage">
+          <Transition name="swap" mode="out-in">
+            <figure v-if="view === 'image'" key="image" class="card-image">
+              <img
+                :src="`/images/secondaries/${current.key}.png`"
+                :alt="`${current.name} secondary mission card`"
+                :style="imageStyle"
+                loading="lazy"
+              />
+            </figure>
 
-          <SecondaryMissionCard v-else :mission="current" :style="textCardStyle" />
+            <SecondaryMissionCard v-else key="text" :mission="current" :style="textCardStyle" />
+          </Transition>
         </div>
 
         <!-- Off-screen stack used only to measure the tallest secondary so the
@@ -141,6 +171,7 @@ onUnmounted(() => {
         </div>
       </div>
     </section>
+    </Transition>
   </main>
 </template>
 
@@ -149,6 +180,12 @@ onUnmounted(() => {
   padding: var(--spacing-xl) var(--spacing-lg) var(--spacing-section);
   max-width: 1080px;
   margin: 0 auto;
+}
+
+/* When a card is open the view is sized to the viewport, so drop the tall
+   bottom padding that would otherwise push the card off-screen. */
+.secondaries.is-detail {
+  padding-bottom: var(--spacing-md);
 }
 
 .hero {
@@ -222,7 +259,7 @@ onUnmounted(() => {
 }
 
 .carousel-frame--text {
-  width: min(620px, 100%);
+  width: min(520px, 100%);
 }
 
 /* Prev / mission-counter / next, stretched to sit flush above the card. */
@@ -270,10 +307,72 @@ onUnmounted(() => {
   border-color: var(--color-primary-active);
 }
 
+/* Swap between the mission list and the detail carousel (in both directions:
+   selecting a card and returning to the list). */
+.list-enter-active,
+.list-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.list-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-enter-active,
+  .list-leave-active {
+    transition: none;
+  }
+
+  .list-enter-from,
+  .list-leave-to {
+    transform: none;
+  }
+}
+
 /* --- Detail stage: one content pane at a time (image OR text) --- */
 .stage {
   display: flex;
   justify-content: center;
+}
+
+/* Crossfade + gentle lift when swapping between the card image and its text.
+   `out-in` fades the outgoing pane out before the incoming one lifts in. */
+.swap-enter-active,
+.swap-leave-active {
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s ease;
+}
+
+.swap-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.swap-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .swap-enter-active,
+  .swap-leave-active {
+    transition: none;
+  }
+
+  .swap-enter-from,
+  .swap-leave-to {
+    transform: none;
+  }
 }
 
 /* The card is sized by height so the whole card fits the viewport without

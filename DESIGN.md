@@ -342,7 +342,8 @@ Team identity on the board reuses the existing `{colors.accent-teal}` (Team A) a
 - **Role · Defender** (`{colors.role-defender}` — #4a72b0): pairing-board role badge (shield).
 - **Role · Attacker** (`{colors.role-attacker}` — #c64545): pairing-board role badge (sword).
 - **Role · Refused** (`{colors.role-refused}` — #8a5aa8): pairing-board role badge (cross/X).
-- Each of the three tokens above has a matching `-tint` variant (e.g. `{colors.role-defender-tint}`) — a low-alpha wash (0.14 light / 0.18 dark) used as the badge background, with the solid color reserved for the icon.
+- **Role · Champion** (`{colors.role-champion}` — #b0862f): pairing-board role badge (crown), the warm gold counterpart to the cool defender token.
+- Each of the four tokens above has a matching `-tint` variant (e.g. `{colors.role-defender-tint}`) — a low-alpha wash (0.14 light / 0.18 dark) used as the badge background, with the solid color reserved for the icon.
 
 ### Surface
 

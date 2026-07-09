@@ -20,8 +20,20 @@ import {
 export function usePairingSession() {
   const state = shallowRef<PairingState | null>(null)
 
+  // The reveal phases are pure interstitials — the live board already shows
+  // every selection and committed match-up — so we auto-advance past them and
+  // never surface them in the UI. (The state machine keeps them so the module
+  // resolution/commit still happens; we just don't stop on them.)
+  function settle(s: PairingState): PairingState {
+    let next = s
+    while (next.phase.kind.endsWith('-reveal')) {
+      next = proceed(next)
+    }
+    return next
+  }
+
   function start(config: PairingConfig) {
-    state.value = createPairingState(config)
+    state.value = settle(createPairingState(config))
   }
 
   function reset() {
@@ -29,19 +41,19 @@ export function usePairingSession() {
   }
 
   function defender(id: string) {
-    if (state.value) state.value = submitDefender(state.value, id)
+    if (state.value) state.value = settle(submitDefender(state.value, id))
   }
 
   function attackers(ids: string[]) {
-    if (state.value) state.value = submitAttackers(state.value, ids)
+    if (state.value) state.value = settle(submitAttackers(state.value, ids))
   }
 
   function counter(id: string) {
-    if (state.value) state.value = submitCounter(state.value, id)
+    if (state.value) state.value = settle(submitCounter(state.value, id))
   }
 
   function next() {
-    if (state.value) state.value = proceed(state.value)
+    if (state.value) state.value = settle(proceed(state.value))
   }
 
   function layout(matchupId: string, value: LayoutLetter) {

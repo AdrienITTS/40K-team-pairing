@@ -66,9 +66,9 @@ const kindLabel = computed(() =>
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-xl);
   background: var(--color-surface-card);
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md);
   width: 100%;
-  max-width: 620px;
+  max-width: 520px;
 }
 
 .eyebrow {
@@ -82,21 +82,21 @@ const kindLabel = computed(() =>
 
 .mission-name {
   font-family: var(--font-display);
-  font-size: 28px;
+  font-size: 23px;
   letter-spacing: -0.5px;
-  margin: 2px 0 var(--spacing-sm);
+  margin: 2px 0 var(--spacing-xs);
   color: var(--color-ink);
 }
 
 .when-drawn {
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.45;
   color: var(--color-body);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-left: 3px solid var(--color-primary);
   background: var(--color-surface-soft);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: var(--spacing-sm);
 }
 
 .section {
@@ -170,7 +170,7 @@ const kindLabel = computed(() =>
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
 }
 
 .row {
@@ -181,8 +181,8 @@ const kindLabel = computed(() =>
 }
 
 .row-text {
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.4;
   color: var(--color-body-strong);
 }
 
@@ -202,8 +202,8 @@ const kindLabel = computed(() =>
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 40px;
-  padding: 4px var(--spacing-xs);
+  min-width: 36px;
+  padding: 3px var(--spacing-xs);
   border-radius: var(--radius-sm);
   background: var(--color-primary);
   color: var(--color-on-primary);
@@ -212,7 +212,7 @@ const kindLabel = computed(() =>
 
 .vp-value {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
 }
 
@@ -253,9 +253,9 @@ const kindLabel = computed(() =>
 .action-rows {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: var(--spacing-xs) var(--spacing-md);
-  font-size: 14px;
-  line-height: 1.5;
+  gap: var(--spacing-xxs) var(--spacing-md);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .action-rows dt {
@@ -272,11 +272,11 @@ const kindLabel = computed(() =>
 }
 
 .designer-note {
-  font-size: 13px;
+  font-size: 12px;
   font-style: italic;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--color-muted);
-  margin-top: var(--spacing-md);
+  margin-top: var(--spacing-sm);
 }
 
 /* --- Rich inline styling of the source card HTML (bold terms, underlines,

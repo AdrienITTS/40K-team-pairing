@@ -207,12 +207,12 @@ export function getPlayer(state: PairingState, id: string): Player {
   return p
 }
 
-export type PlayerRole = 'defender' | 'attacker' | 'refused'
+export type PlayerRole = 'defender' | 'attacker' | 'refused' | 'champion'
 
 /**
  * God-view: a player's current role, derived from committed match-ups plus the
  * live (uncommitted) draft. Returns null for players with no current role
- * (in-pool, or a Champion — Champions are not one of the three badge roles).
+ * (still in the pool).
  *
  * Committed match-ups take priority over the draft: a player consumed into a
  * match-up in a prior module can't be re-nominated in the current one anyway
@@ -222,7 +222,7 @@ export type PlayerRole = 'defender' | 'attacker' | 'refused'
 export function playerRole(state: PairingState, id: string): PlayerRole | null {
   for (const m of state.matchups) {
     if (m.playerA.id !== id && m.playerB.id !== id) continue
-    if (m.matchType === 'champion') return null
+    if (m.matchType === 'champion') return 'champion'
     if (m.matchType === 'refused') return 'refused'
     // matchType === 'defender': defenderSide names which side holds the Defender.
     const isPlayerA = m.playerA.id === id
@@ -250,6 +250,8 @@ export interface BoardRow {
   a: BoardSlot | null
   b: BoardSlot | null
   committed: boolean
+  /** The committed match-up this row came from (absent on forming draft rows). */
+  matchup?: Matchup
 }
 
 export interface BoardLayout {
@@ -272,7 +274,7 @@ export function boardLayout(state: PairingState): BoardLayout {
   const rows: BoardRow[] = []
 
   for (const m of state.matchups) {
-    rows.push({ a: slot(m.playerA.id), b: slot(m.playerB.id), committed: true })
+    rows.push({ a: slot(m.playerA.id), b: slot(m.playerB.id), committed: true, matchup: m })
     placed.add(m.playerA.id)
     placed.add(m.playerB.id)
   }

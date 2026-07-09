@@ -274,13 +274,13 @@ describe('playerRole', () => {
     expect(playerRole(state, 'b-0')).toBe('defender')
   })
 
-  it('classifies a completed session: Champions are null, refused-type match-up players are refused', () => {
+  it('classifies a completed session: Champions are champion, refused-type match-up players are refused', () => {
     // 4 players → [main, champion]: the Main module produces a refused match-up,
     // and the single leftover player per team becomes the Champion.
     const state = runToCompletion(4)
     const champion = state.matchups.find((m) => m.matchType === 'champion')!
-    expect(playerRole(state, champion.playerA.id)).toBeNull()
-    expect(playerRole(state, champion.playerB.id)).toBeNull()
+    expect(playerRole(state, champion.playerA.id)).toBe('champion')
+    expect(playerRole(state, champion.playerB.id)).toBe('champion')
 
     const refused = state.matchups.find((m) => m.matchType === 'refused')!
     expect(playerRole(state, refused.playerA.id)).toBe('refused')
@@ -382,7 +382,7 @@ describe('boardLayout', () => {
     expect(pool.find((s) => s.player.id === 'b-2')?.role).toBeNull()
   })
 
-  it('classifies a completed 4-player session: a committed refused pair and a roleless committed Champion row, empty pools', () => {
+  it('classifies a completed 4-player session: a committed refused pair and a committed Champion row, empty pools', () => {
     // 4 players → [main, champion]. runToCompletion always nominates the first
     // available players and counters with the opponent's first Attacker, which
     // (hand-traced) yields defenders a-0/b-0, refused pair a-2/b-2, and
@@ -402,8 +402,8 @@ describe('boardLayout', () => {
     )
     expect(championRow).toBeDefined()
     expect(championRow!.committed).toBe(true)
-    expect(championRow!.a!.role).toBeNull()
-    expect(championRow!.b!.role).toBeNull()
+    expect(championRow!.a!.role).toBe('champion')
+    expect(championRow!.b!.role).toBe('champion')
 
     expect(board.poolA).toHaveLength(0)
     expect(board.poolB).toHaveLength(0)

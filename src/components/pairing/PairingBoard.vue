@@ -4,6 +4,8 @@ import {
   boardLayout,
   moduleLabel,
   type BoardSlot,
+  type LayoutLetter,
+  type Matchup,
   type PairingState,
   type PlayerRole,
 } from '../../data/pairing'
@@ -12,16 +14,26 @@ import RoleIcon from './RoleIcon.vue'
 
 const props = defineProps<{ state: PairingState }>()
 
+const emit = defineEmits<{ layout: [matchupId: string, value: LayoutLetter] }>()
+
 const layout = computed(() => boardLayout(props.state))
+
+const layouts: LayoutLetter[] = ['A', 'B', 'C']
+
+// Guarded so the template can pass a possibly-undefined row match-up directly.
+function choose(matchup: Matchup | undefined, value: LayoutLetter) {
+  if (matchup) emit('layout', matchup.id, value)
+}
 const currentModule = computed(() => moduleLabel(props.state.moduleQueue[props.state.moduleIndex]!))
 
 const roleLabels: Record<PlayerRole, string> = {
   defender: 'Defender',
   attacker: 'Attacker',
   refused: 'Refused',
+  champion: 'Champion',
 }
 
-const legend: PlayerRole[] = ['defender', 'attacker', 'refused']
+const legend: PlayerRole[] = ['defender', 'attacker', 'refused', 'champion']
 
 function cellClass(slot: BoardSlot | null): string {
   if (!slot) return 'pending'
@@ -37,62 +49,87 @@ function cellClass(slot: BoardSlot | null): string {
     </header>
 
     <div class="team-heads">
-      <span class="team-head team-a">
-        <span class="team-dot" />
-        {{ state.config.teamA.name }}
-      </span>
-      <span class="team-head-spacer" />
-      <span class="team-head team-b">
-        {{ state.config.teamB.name }}
-        <span class="team-dot" />
-      </span>
+      <div class="team-heads-inner">
+        <span class="team-head team-a">
+          <span class="team-dot" />
+          {{ state.config.teamA.name }}
+        </span>
+        <span class="team-head-spacer" />
+        <span class="team-head team-b">
+          {{ state.config.teamB.name }}
+          <span class="team-dot" />
+        </span>
+      </div>
+      <span class="team-heads-table" aria-hidden="true" />
     </div>
 
     <ul class="rows">
-      <li
-        v-for="(row, i) in layout.rows"
-        :key="i"
-        class="row"
-        :class="{ committed: row.committed }"
-      >
-        <div class="cell" :class="cellClass(row.a)">
-          <template v-if="row.a">
-            <div class="logo-tile">
-              <img
-                v-if="row.a.player.faction"
-                :src="`/images/factions/${row.a.player.faction}.png`"
-                :alt="row.a.player.faction"
-                width="28"
-                height="28"
-                loading="lazy"
-              />
-              <span v-else class="logo-fallback">·</span>
-            </div>
-            <span class="cell-name">{{ factionName(row.a.player.faction) }}</span>
-            <RoleIcon v-if="row.a.role" :role="row.a.role" />
-          </template>
-          <span v-else class="pending-text">pending</span>
+      <li v-for="(row, i) in layout.rows" :key="i" class="row" :class="{ committed: row.committed }">
+        <div class="matchup-line">
+          <div class="cell" :class="cellClass(row.a)">
+            <template v-if="row.a">
+              <div class="logo-tile">
+                <img
+                  v-if="row.a.player.faction"
+                  :src="`/images/factions/${row.a.player.faction}.png`"
+                  :alt="row.a.player.faction"
+                  width="28"
+                  height="28"
+                  loading="lazy"
+                />
+                <span v-else class="logo-fallback">·</span>
+              </div>
+              <span class="cell-name">{{ factionName(row.a.player.faction) }}</span>
+              <RoleIcon v-if="row.a.role" :role="row.a.role" />
+            </template>
+            <span v-else class="pending-text">pending</span>
+          </div>
+
+          <span class="vs">vs</span>
+
+          <div class="cell" :class="cellClass(row.b)">
+            <template v-if="row.b">
+              <div class="logo-tile">
+                <img
+                  v-if="row.b.player.faction"
+                  :src="`/images/factions/${row.b.player.faction}.png`"
+                  :alt="row.b.player.faction"
+                  width="28"
+                  height="28"
+                  loading="lazy"
+                />
+                <span v-else class="logo-fallback">·</span>
+              </div>
+              <span class="cell-name">{{ factionName(row.b.player.faction) }}</span>
+              <RoleIcon v-if="row.b.role" :role="row.b.role" />
+            </template>
+            <span v-else class="pending-text">pending</span>
+          </div>
         </div>
 
-        <span class="vs">vs</span>
-
-        <div class="cell" :class="cellClass(row.b)">
-          <template v-if="row.b">
-            <div class="logo-tile">
-              <img
-                v-if="row.b.player.faction"
-                :src="`/images/factions/${row.b.player.faction}.png`"
-                :alt="row.b.player.faction"
-                width="28"
-                height="28"
-                loading="lazy"
-              />
-              <span v-else class="logo-fallback">·</span>
-            </div>
-            <span class="cell-name">{{ factionName(row.b.player.faction) }}</span>
-            <RoleIcon v-if="row.b.role" :role="row.b.role" />
+        <!-- Table choice rides inline at the end of the match-up line. The slot
+             is reserved on every row so committed and pending rows stay in
+             column alignment; committed Defender rows let the Defender declare
+             their table live. -->
+        <div class="row-table">
+          <template v-if="row.committed && row.matchup">
+            <template v-if="row.matchup.layout.kind === 'defender-choice'">
+              <span class="row-layout-label">Table</span>
+              <div class="layout-picker">
+                <button
+                  v-for="letter in layouts"
+                  :key="letter"
+                  type="button"
+                  class="layout-btn"
+                  :class="{ active: row.matchup?.layout.value === letter }"
+                  @click="choose(row.matchup, letter)"
+                >
+                  {{ letter }}
+                </button>
+              </div>
+            </template>
+            <span v-else class="layout-fixed">Layout {{ row.matchup.layout.value }}</span>
           </template>
-          <span v-else class="pending-text">pending</span>
         </div>
       </li>
     </ul>
@@ -160,13 +197,16 @@ function cellClass(slot: BoardSlot | null): string {
 
 <style scoped>
 .board {
+  /* Width reserved at the end of each match-up line for its table choice, kept
+     in sync between the rows and the team-heads so columns stay aligned. */
+  --table-col-width: 136px;
   background: var(--color-surface-card);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
 }
 
 .board-head {
@@ -186,10 +226,24 @@ function cellClass(slot: BoardSlot | null): string {
 }
 
 .team-heads {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.team-heads-inner {
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: var(--spacing-sm);
+}
+
+/* Mirror the per-row table slot so the team names sit over their cells. */
+.team-heads-table {
+  width: var(--table-col-width);
+  flex-shrink: 0;
 }
 
 .team-head {
@@ -225,18 +279,76 @@ function cellClass(slot: BoardSlot | null): string {
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-xs);
 }
 
 .row {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.matchup-line {
+  flex: 1;
+  min-width: 0;
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: var(--spacing-sm);
 }
 
-.row.committed {
+.row.committed .matchup-line {
   opacity: 0.82;
+}
+
+.row-table {
+  width: var(--table-col-width);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-xs);
+}
+
+.row-layout-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--color-muted);
+}
+
+.layout-picker {
+  display: flex;
+  gap: var(--spacing-xxs);
+}
+
+.layout-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-canvas);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-body);
+  cursor: pointer;
+}
+
+.layout-btn:hover {
+  background: var(--color-surface-soft);
+}
+
+.layout-btn.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.layout-fixed {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-muted);
 }
 
 .vs {
@@ -250,10 +362,10 @@ function cellClass(slot: BoardSlot | null): string {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-sm);
+  padding: var(--spacing-xxs) var(--spacing-sm);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-md);
-  min-height: 48px;
+  min-height: 40px;
 }
 
 .cell.pending {
@@ -323,6 +435,12 @@ function cellClass(slot: BoardSlot | null): string {
   background: var(--color-role-refused-tint);
   border-color: var(--color-role-refused);
   color: var(--color-role-refused);
+}
+
+.role-champion {
+  background: var(--color-role-champion-tint);
+  border-color: var(--color-role-champion);
+  color: var(--color-role-champion);
 }
 
 .role-none {
@@ -413,16 +531,32 @@ function cellClass(slot: BoardSlot | null): string {
 }
 
 @media (max-width: 640px) {
-  .team-heads {
+  .team-heads-inner {
     grid-template-columns: 1fr;
     gap: var(--spacing-xxs);
+  }
+
+  .team-heads-table {
+    display: none;
   }
 
   .team-head-spacer {
     display: none;
   }
 
+  /* Stack the table choice back under the match-up on narrow screens. */
   .row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-xxs);
+  }
+
+  .row-table {
+    width: auto;
+    justify-content: flex-end;
+  }
+
+  .matchup-line {
     grid-template-columns: 1fr;
     gap: var(--spacing-xxs);
   }

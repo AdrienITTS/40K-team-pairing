@@ -34,6 +34,20 @@ defineProps<{ role: PlayerRole }>()
     <path d="M6 20l11-11M17 9l-2-2 3-3 2 2-3 3zM4 20l2-2M14 6l1.5-1.5" />
   </svg>
   <svg
+    v-else-if="role === 'champion'"
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M3 8l4.5 3.5L12 5l4.5 6.5L21 8l-2 10H5L3 8z" />
+  </svg>
+  <svg
     v-else
     width="16"
     height="16"

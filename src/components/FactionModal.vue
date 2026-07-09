@@ -2,8 +2,10 @@
 import { onMounted, onUnmounted } from 'vue'
 import type { FactionInfo } from '../data/factions'
 
+// Kept mounted with a nullable faction so the close animation can play — a
+// parent `v-if` would destroy the component before it could animate out.
 const props = defineProps<{
-  faction: FactionInfo
+  faction: FactionInfo | null
 }>()
 
 const emit = defineEmits<{
@@ -11,7 +13,7 @@ const emit = defineEmits<{
 }>()
 
 function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') emit('close')
+  if (props.faction && event.key === 'Escape') emit('close')
 }
 
 onMounted(() => window.addEventListener('keydown', onKeydown))
@@ -20,57 +22,59 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 <template>
   <Teleport to="body">
-    <div class="modal-backdrop" @click.self="emit('close')">
-      <div
-        class="modal-panel"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="`${props.faction.name} details`"
-      >
-        <button class="modal-close" type="button" aria-label="Close" @click="emit('close')">
-          ✕
-        </button>
+    <Transition name="modal">
+      <div v-if="faction" class="modal-backdrop" @click.self="emit('close')">
+        <div
+          class="modal-panel"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="`${faction.name} details`"
+        >
+          <button class="modal-close" type="button" aria-label="Close" @click="emit('close')">
+            ✕
+          </button>
 
-        <div class="modal-head">
-          <div class="modal-logo">
-            <img
-              :src="`/images/factions/${props.faction.key}.png`"
-              :alt="`${props.faction.name} logo`"
-              width="56"
-              height="56"
-            />
+          <div class="modal-head">
+            <div class="modal-logo">
+              <img
+                :src="`/images/factions/${faction.key}.png`"
+                :alt="`${faction.name} logo`"
+                width="56"
+                height="56"
+              />
+            </div>
+            <div>
+              <p class="modal-allegiance">{{ faction.allegiance }}</p>
+              <h2>{{ faction.name }}</h2>
+            </div>
           </div>
-          <div>
-            <p class="modal-allegiance">{{ props.faction.allegiance }}</p>
-            <h2>{{ props.faction.name }}</h2>
-          </div>
+
+          <section class="modal-section">
+            <h3>Lore</h3>
+            <p>{{ faction.lore }}</p>
+          </section>
+
+          <section class="modal-section">
+            <h3>Difficulty</h3>
+            <p class="stars" :aria-label="`${faction.difficulty} out of 5 difficulty`">
+              <span
+                v-for="n in 5"
+                :key="n"
+                class="star"
+                :class="{ filled: n <= faction.difficulty }"
+                aria-hidden="true"
+                >★</span
+              >
+            </p>
+          </section>
+
+          <section class="modal-section">
+            <h3>Competitive play</h3>
+            <p>{{ faction.playstyle }}</p>
+          </section>
         </div>
-
-        <section class="modal-section">
-          <h3>Lore</h3>
-          <p>{{ props.faction.lore }}</p>
-        </section>
-
-        <section class="modal-section">
-          <h3>Difficulty</h3>
-          <p class="stars" :aria-label="`${props.faction.difficulty} out of 5 difficulty`">
-            <span
-              v-for="n in 5"
-              :key="n"
-              class="star"
-              :class="{ filled: n <= props.faction.difficulty }"
-              aria-hidden="true"
-              >★</span
-            >
-          </p>
-        </section>
-
-        <section class="modal-section">
-          <h3>Competitive play</h3>
-          <p>{{ props.faction.playstyle }}</p>
-        </section>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 
@@ -84,6 +88,41 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   justify-content: center;
   padding: var(--spacing-lg);
   z-index: 100;
+}
+
+/* Open/close: the scrim fades while the panel scales and lifts into place. */
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.22s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-active .modal-panel,
+.modal-leave-active .modal-panel {
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-enter-from .modal-panel,
+.modal-leave-to .modal-panel {
+  transform: scale(0.95) translateY(12px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-enter-active,
+  .modal-leave-active,
+  .modal-enter-active .modal-panel,
+  .modal-leave-active .modal-panel {
+    transition: none;
+  }
+
+  .modal-enter-from .modal-panel,
+  .modal-leave-to .modal-panel {
+    transform: none;
+  }
 }
 
 .modal-panel {
