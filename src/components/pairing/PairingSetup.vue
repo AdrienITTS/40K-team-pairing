@@ -165,258 +165,280 @@ function submit() {
   <form class="setup" @submit.prevent="submit">
     <ol class="stepper">
       <li :class="{ active: step === 1, done: step > 1 }">1 · Round</li>
-      <li :class="{ active: step === 2, done: step > 2 }">2 · {{ teamAName || 'Team A' }} armies</li>
-      <li :class="{ active: step === 3, done: step > 3 }">3 · {{ teamAName || 'Team A' }} dispositions</li>
-      <li :class="{ active: step === 4, done: step > 4 }">4 · {{ teamBName || 'Team B' }} armies</li>
+      <li :class="{ active: step === 2, done: step > 2 }">
+        2 · {{ teamAName || 'Team A' }} armies
+      </li>
+      <li :class="{ active: step === 3, done: step > 3 }">
+        3 · {{ teamAName || 'Team A' }} dispositions
+      </li>
+      <li :class="{ active: step === 4, done: step > 4 }">
+        4 · {{ teamBName || 'Team B' }} armies
+      </li>
       <li :class="{ active: step === 5 }">5 · {{ teamBName || 'Team B' }} dispositions</li>
     </ol>
 
     <Transition name="step" mode="out-in">
-    <section v-if="step === 1" key="step-1" class="step">
-      <div class="event-row">
-        <label class="field size-field">
-          <span class="field-label">Players per team</span>
-          <div class="size-picker">
-            <button
-              v-for="s in sizes"
-              :key="s"
-              type="button"
-              class="size-btn"
-              :class="{ active: teamSize === s }"
-              @click="teamSize = s"
-            >
-              {{ s }}
-            </button>
+      <section v-if="step === 1" key="step-1" class="step">
+        <div class="event-row">
+          <label class="field size-field">
+            <span class="field-label">Players per team</span>
+            <div class="size-picker">
+              <button
+                v-for="s in sizes"
+                :key="s"
+                type="button"
+                class="size-btn"
+                :class="{ active: teamSize === s }"
+                @click="teamSize = s"
+              >
+                {{ s }}
+              </button>
+            </div>
+          </label>
+
+          <label class="field round-field">
+            <span class="field-label">Round</span>
+            <input v-model.number="round" type="number" min="1" class="text-input round-input" />
+          </label>
+        </div>
+
+        <p class="module-summary">
+          <span class="summary-label">Pairing modules</span>
+          {{ moduleSummary }}
+        </p>
+
+        <div class="teams">
+          <input
+            v-model="teamAName"
+            type="text"
+            class="text-input team-name side-a"
+            placeholder="Team A name"
+            aria-label="Team A name"
+          />
+          <input
+            v-model="teamBName"
+            type="text"
+            class="text-input team-name side-b"
+            placeholder="Team B name"
+            aria-label="Team B name"
+          />
+        </div>
+
+        <div class="nav-row">
+          <button
+            type="button"
+            class="btn-primary nav-next"
+            :disabled="!canAdvanceStep1"
+            @click="step = 2"
+          >
+            Next →
+          </button>
+        </div>
+      </section>
+
+      <section v-else-if="step === 2" key="step-2" class="step">
+        <div class="picker-head">
+          <h2 class="picker-title">Pick {{ teamAName }}'s armies</h2>
+          <span class="picker-count">{{ factionsA.length }} / {{ teamSize }} selected</span>
+        </div>
+        <p class="picker-rule">
+          One army per faction keyword, and only one Space Marine Chapter per team.
+        </p>
+
+        <div class="allegiance-groups">
+          <div v-for="a in sortedAllegiances" :key="a.id" class="allegiance-group">
+            <h3 class="allegiance-title">{{ a.title }}</h3>
+            <div class="chip-grid">
+              <button
+                v-for="f in a.factions"
+                :key="f.key"
+                type="button"
+                class="faction-chip side-a"
+                :class="{ selected: factionsA.includes(f.key) }"
+                :disabled="chipDisabled('A', f.key)"
+                @click="toggleFaction('A', f.key)"
+              >
+                <span class="chip-tile">
+                  <img
+                    :src="`/images/factions/${f.key}.png`"
+                    :alt="f.name"
+                    width="40"
+                    height="40"
+                    loading="lazy"
+                  />
+                </span>
+                <span class="chip-name">{{ f.name }}</span>
+                <span v-if="factionsA.includes(f.key)" class="chip-check">✓</span>
+              </button>
+            </div>
           </div>
-        </label>
+        </div>
 
-        <label class="field round-field">
-          <span class="field-label">Round</span>
-          <input v-model.number="round" type="number" min="1" class="text-input round-input" />
-        </label>
-      </div>
+        <div class="nav-row">
+          <button type="button" class="btn-secondary nav-back" @click="step = 1">← Back</button>
+          <button
+            type="button"
+            class="btn-primary nav-next"
+            :disabled="!canAdvanceStep2"
+            @click="step = 3"
+          >
+            Next →
+          </button>
+        </div>
+      </section>
 
-      <p class="module-summary">
-        <span class="summary-label">Pairing modules</span>
-        {{ moduleSummary }}
-      </p>
+      <section v-else-if="step === 3" key="step-3" class="step">
+        <div class="picker-head">
+          <h2 class="picker-title">{{ teamAName }}'s Force Dispositions</h2>
+          <span class="picker-count">optional · max {{ cap }} of each</span>
+        </div>
+        <p class="picker-rule">
+          Assign each player a Force Disposition, or leave any blank — it's optional. Dispositions
+          set the terrain layouts you'll see once each table is paired.
+        </p>
 
-      <div class="teams">
-        <input
-          v-model="teamAName"
-          type="text"
-          class="text-input team-name side-a"
-          placeholder="Team A name"
-          aria-label="Team A name"
-        />
-        <input
-          v-model="teamBName"
-          type="text"
-          class="text-input team-name side-b"
-          placeholder="Team B name"
-          aria-label="Team B name"
-        />
-      </div>
-
-      <div class="nav-row">
-        <button
-          type="button"
-          class="btn-primary nav-next"
-          :disabled="!canAdvanceStep1"
-          @click="step = 2"
-        >
-          Next →
-        </button>
-      </div>
-    </section>
-
-    <section v-else-if="step === 2" key="step-2" class="step">
-      <div class="picker-head">
-        <h2 class="picker-title">Pick {{ teamAName }}'s armies</h2>
-        <span class="picker-count">{{ factionsA.length }} / {{ teamSize }} selected</span>
-      </div>
-      <p class="picker-rule">One army per faction keyword, and only one Space Marine Chapter per team.</p>
-
-      <div class="allegiance-groups">
-        <div v-for="a in sortedAllegiances" :key="a.id" class="allegiance-group">
-          <h3 class="allegiance-title">{{ a.title }}</h3>
-          <div class="chip-grid">
-            <button
-              v-for="f in a.factions"
-              :key="f.key"
-              type="button"
-              class="faction-chip side-a"
-              :class="{ selected: factionsA.includes(f.key) }"
-              :disabled="chipDisabled('A', f.key)"
-              @click="toggleFaction('A', f.key)"
-            >
+        <ul class="disp-roster">
+          <li v-for="key in factionsA" :key="key" class="disp-row">
+            <span class="disp-faction">
               <span class="chip-tile">
                 <img
-                  :src="`/images/factions/${f.key}.png`"
-                  :alt="f.name"
+                  :src="`/images/factions/${key}.png`"
+                  :alt="factionName(key)"
                   width="40"
                   height="40"
                   loading="lazy"
                 />
               </span>
-              <span class="chip-name">{{ f.name }}</span>
-              <span v-if="factionsA.includes(f.key)" class="chip-check">✓</span>
-            </button>
+              <span class="chip-name">{{ factionName(key) }}</span>
+            </span>
+            <span class="disp-choices" role="group" :aria-label="`${factionName(key)} disposition`">
+              <button
+                v-for="d in dispositions"
+                :key="d.key"
+                type="button"
+                class="disp-pick"
+                :class="{ chosen: dispositionsA[key] === d.key }"
+                :style="dispAccent(d.key)"
+                :disabled="dispDisabled('A', key, d.key)"
+                :title="d.name"
+                :aria-label="d.name"
+                :aria-pressed="dispositionsA[key] === d.key"
+                @click="toggleDisposition('A', key, d.key)"
+              >
+                <DispositionIcon :symbol="d.symbol" />
+              </button>
+            </span>
+          </li>
+        </ul>
+
+        <div class="nav-row">
+          <button type="button" class="btn-secondary nav-back" @click="step = 2">← Back</button>
+          <button type="button" class="btn-primary nav-next" @click="step = 4">Next →</button>
+        </div>
+      </section>
+
+      <section v-else-if="step === 4" key="step-4" class="step">
+        <div class="picker-head">
+          <h2 class="picker-title">Pick {{ teamBName }}'s armies</h2>
+          <span class="picker-count">{{ factionsB.length }} / {{ teamSize }} selected</span>
+        </div>
+        <p class="picker-rule">
+          One army per faction keyword, and only one Space Marine Chapter per team.
+        </p>
+
+        <div class="allegiance-groups">
+          <div v-for="a in sortedAllegiances" :key="a.id" class="allegiance-group">
+            <h3 class="allegiance-title">{{ a.title }}</h3>
+            <div class="chip-grid">
+              <button
+                v-for="f in a.factions"
+                :key="f.key"
+                type="button"
+                class="faction-chip side-b"
+                :class="{ selected: factionsB.includes(f.key) }"
+                :disabled="chipDisabled('B', f.key)"
+                @click="toggleFaction('B', f.key)"
+              >
+                <span class="chip-tile">
+                  <img
+                    :src="`/images/factions/${f.key}.png`"
+                    :alt="f.name"
+                    width="40"
+                    height="40"
+                    loading="lazy"
+                  />
+                </span>
+                <span class="chip-name">{{ f.name }}</span>
+                <span v-if="factionsB.includes(f.key)" class="chip-check">✓</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="nav-row">
-        <button type="button" class="btn-secondary nav-back" @click="step = 1">← Back</button>
-        <button
-          type="button"
-          class="btn-primary nav-next"
-          :disabled="!canAdvanceStep2"
-          @click="step = 3"
-        >
-          Next →
-        </button>
-      </div>
-    </section>
+        <div class="nav-row">
+          <button type="button" class="btn-secondary nav-back" @click="step = 3">← Back</button>
+          <button
+            type="button"
+            class="btn-primary nav-next"
+            :disabled="!canAdvanceStep4"
+            @click="step = 5"
+          >
+            Next →
+          </button>
+        </div>
+      </section>
 
-    <section v-else-if="step === 3" key="step-3" class="step">
-      <div class="picker-head">
-        <h2 class="picker-title">{{ teamAName }}'s Force Dispositions</h2>
-        <span class="picker-count">optional · max {{ cap }} of each</span>
-      </div>
-      <p class="picker-rule">
-        Assign each player a Force Disposition, or leave any blank — it's optional. Dispositions set
-        the terrain layouts you'll see once each table is paired.
-      </p>
+      <section v-else key="step-5" class="step">
+        <div class="picker-head">
+          <h2 class="picker-title">{{ teamBName }}'s Force Dispositions</h2>
+          <span class="picker-count">optional · max {{ cap }} of each</span>
+        </div>
+        <p class="picker-rule">
+          Assign each player a Force Disposition, or leave any blank — it's optional. Dispositions
+          set the terrain layouts you'll see once each table is paired.
+        </p>
 
-      <ul class="disp-roster">
-        <li v-for="key in factionsA" :key="key" class="disp-row">
-          <span class="disp-faction">
-            <span class="chip-tile">
-              <img :src="`/images/factions/${key}.png`" :alt="factionName(key)" width="40" height="40" loading="lazy" />
-            </span>
-            <span class="chip-name">{{ factionName(key) }}</span>
-          </span>
-          <span class="disp-choices" role="group" :aria-label="`${factionName(key)} disposition`">
-            <button
-              v-for="d in dispositions"
-              :key="d.key"
-              type="button"
-              class="disp-pick"
-              :class="{ chosen: dispositionsA[key] === d.key }"
-              :style="dispAccent(d.key)"
-              :disabled="dispDisabled('A', key, d.key)"
-              :title="d.name"
-              :aria-label="d.name"
-              :aria-pressed="dispositionsA[key] === d.key"
-              @click="toggleDisposition('A', key, d.key)"
-            >
-              <DispositionIcon :symbol="d.symbol" />
-            </button>
-          </span>
-        </li>
-      </ul>
-
-      <div class="nav-row">
-        <button type="button" class="btn-secondary nav-back" @click="step = 2">← Back</button>
-        <button type="button" class="btn-primary nav-next" @click="step = 4">Next →</button>
-      </div>
-    </section>
-
-    <section v-else-if="step === 4" key="step-4" class="step">
-      <div class="picker-head">
-        <h2 class="picker-title">Pick {{ teamBName }}'s armies</h2>
-        <span class="picker-count">{{ factionsB.length }} / {{ teamSize }} selected</span>
-      </div>
-      <p class="picker-rule">One army per faction keyword, and only one Space Marine Chapter per team.</p>
-
-      <div class="allegiance-groups">
-        <div v-for="a in sortedAllegiances" :key="a.id" class="allegiance-group">
-          <h3 class="allegiance-title">{{ a.title }}</h3>
-          <div class="chip-grid">
-            <button
-              v-for="f in a.factions"
-              :key="f.key"
-              type="button"
-              class="faction-chip side-b"
-              :class="{ selected: factionsB.includes(f.key) }"
-              :disabled="chipDisabled('B', f.key)"
-              @click="toggleFaction('B', f.key)"
-            >
+        <ul class="disp-roster">
+          <li v-for="key in factionsB" :key="key" class="disp-row">
+            <span class="disp-faction">
               <span class="chip-tile">
                 <img
-                  :src="`/images/factions/${f.key}.png`"
-                  :alt="f.name"
+                  :src="`/images/factions/${key}.png`"
+                  :alt="factionName(key)"
                   width="40"
                   height="40"
                   loading="lazy"
                 />
               </span>
-              <span class="chip-name">{{ f.name }}</span>
-              <span v-if="factionsB.includes(f.key)" class="chip-check">✓</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="nav-row">
-        <button type="button" class="btn-secondary nav-back" @click="step = 3">← Back</button>
-        <button
-          type="button"
-          class="btn-primary nav-next"
-          :disabled="!canAdvanceStep4"
-          @click="step = 5"
-        >
-          Next →
-        </button>
-      </div>
-    </section>
-
-    <section v-else key="step-5" class="step">
-      <div class="picker-head">
-        <h2 class="picker-title">{{ teamBName }}'s Force Dispositions</h2>
-        <span class="picker-count">optional · max {{ cap }} of each</span>
-      </div>
-      <p class="picker-rule">
-        Assign each player a Force Disposition, or leave any blank — it's optional. Dispositions set
-        the terrain layouts you'll see once each table is paired.
-      </p>
-
-      <ul class="disp-roster">
-        <li v-for="key in factionsB" :key="key" class="disp-row">
-          <span class="disp-faction">
-            <span class="chip-tile">
-              <img :src="`/images/factions/${key}.png`" :alt="factionName(key)" width="40" height="40" loading="lazy" />
+              <span class="chip-name">{{ factionName(key) }}</span>
             </span>
-            <span class="chip-name">{{ factionName(key) }}</span>
-          </span>
-          <span class="disp-choices" role="group" :aria-label="`${factionName(key)} disposition`">
-            <button
-              v-for="d in dispositions"
-              :key="d.key"
-              type="button"
-              class="disp-pick"
-              :class="{ chosen: dispositionsB[key] === d.key }"
-              :style="dispAccent(d.key)"
-              :disabled="dispDisabled('B', key, d.key)"
-              :title="d.name"
-              :aria-label="d.name"
-              :aria-pressed="dispositionsB[key] === d.key"
-              @click="toggleDisposition('B', key, d.key)"
-            >
-              <DispositionIcon :symbol="d.symbol" />
-            </button>
-          </span>
-        </li>
-      </ul>
+            <span class="disp-choices" role="group" :aria-label="`${factionName(key)} disposition`">
+              <button
+                v-for="d in dispositions"
+                :key="d.key"
+                type="button"
+                class="disp-pick"
+                :class="{ chosen: dispositionsB[key] === d.key }"
+                :style="dispAccent(d.key)"
+                :disabled="dispDisabled('B', key, d.key)"
+                :title="d.name"
+                :aria-label="d.name"
+                :aria-pressed="dispositionsB[key] === d.key"
+                @click="toggleDisposition('B', key, d.key)"
+              >
+                <DispositionIcon :symbol="d.symbol" />
+              </button>
+            </span>
+          </li>
+        </ul>
 
-      <div class="nav-row">
-        <button type="button" class="btn-secondary nav-back" @click="step = 4">← Back</button>
-        <button type="submit" class="btn-primary nav-next" :disabled="!canStart">
-          Start pairing →
-        </button>
-      </div>
-    </section>
+        <div class="nav-row">
+          <button type="button" class="btn-secondary nav-back" @click="step = 4">← Back</button>
+          <button type="submit" class="btn-primary nav-next" :disabled="!canStart">
+            Start pairing →
+          </button>
+        </div>
+      </section>
     </Transition>
   </form>
 </template>

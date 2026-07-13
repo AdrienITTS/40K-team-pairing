@@ -181,8 +181,7 @@ export const allegiances: Allegiance[] = [
           'Less shooting than other Marine flavours',
           'Loses momentum if screened out or stalled',
         ],
-        teamRole:
-          'An aggressive Attacker you point at a bracketed or shooting-light army.',
+        teamRole: 'An aggressive Attacker you point at a bracketed or shooting-light army.',
         pairingTip:
           'Wants a melee-soft target — better held as a counter-pick than dropped blind into a screened gunline.',
       },
@@ -235,8 +234,7 @@ export const allegiances: Allegiance[] = [
         ],
         teamRole:
           'A dependable anchor/Defender that rounds out the team and rarely loses its half.',
-        pairingTip:
-          'A safe blind drop — hard to blow out, holds ground against most of the field.',
+        pairingTip: 'A safe blind drop — hard to blow out, holds ground against most of the field.',
       },
       {
         key: 'deathwatch',
@@ -259,8 +257,7 @@ export const allegiances: Allegiance[] = [
           'Complex to pilot to its full potential',
           'Premium points cost per model',
         ],
-        teamRole:
-          'A flexible pick whose loadout can be aimed at the expected matchup.',
+        teamRole: 'A flexible pick whose loadout can be aimed at the expected matchup.',
         pairingTip:
           'Adapts reasonably blind, but shines most when you can tune it to a known counter.',
       },
@@ -285,8 +282,7 @@ export const allegiances: Allegiance[] = [
           'Fragile to concentrated fire once pinned',
           'Thin margins reward near-perfect target priority',
         ],
-        teamRole:
-          'A mobile secondary-scorer/Attacker with strong action economy.',
+        teamRole: 'A mobile secondary-scorer/Attacker with strong action economy.',
         pairingTip:
           'Its mobility keeps it flexible blind; especially strong dropped into slow, static lists.',
       },
@@ -311,8 +307,7 @@ export const allegiances: Allegiance[] = [
           'Horde and objective spam swarm it off the board',
           'Losing a single Knight is a huge swing',
         ],
-        teamRole:
-          'A specialist — steer it away from horde and objective-spam armies.',
+        teamRole: 'A specialist — steer it away from horde and objective-spam armies.',
         pairingTip:
           'Feast-or-famine blind: counter-pick it into elite, low-model lists and never drop it into a horde.',
       },
@@ -337,10 +332,8 @@ export const allegiances: Allegiance[] = [
           'Premium points cost per model',
           'Relies on the pilot to pick the right tools',
         ],
-        teamRole:
-          'The ideal flexible anchor — comfortable dropped into any matchup on the board.',
-        pairingTip:
-          'The safest blind pick in the game; it adapts to almost anything you draw.',
+        teamRole: 'The ideal flexible anchor — comfortable dropped into any matchup on the board.',
+        pairingTip: 'The safest blind pick in the game; it adapts to almost anything you draw.',
       },
       {
         key: 'space_wolves',
@@ -363,10 +356,8 @@ export const allegiances: Allegiance[] = [
           'Less shooting than gunline Chapters',
           'Premium points cost',
         ],
-        teamRole:
-          'An aggressive Attacker/flex that punishes a soft midfield.',
-        pairingTip:
-          'Reasonable blind, but hits hardest aimed at a melee-light target.',
+        teamRole: 'An aggressive Attacker/flex that punishes a soft midfield.',
+        pairingTip: 'Reasonable blind, but hits hardest aimed at a melee-light target.',
       },
     ],
   },
@@ -397,8 +388,7 @@ export const allegiances: Allegiance[] = [
           'Fragile to concentrated shooting',
           'Needs early tempo or it falls behind',
         ],
-        teamRole:
-          'A high-ceiling Attacker best committed into a known soft matchup.',
+        teamRole: 'A high-ceiling Attacker best committed into a known soft matchup.',
         pairingTip:
           'High-variance blind; counter-pick it into fragile shooting lists rather than trusting the dice.',
       },
@@ -423,8 +413,7 @@ export const allegiances: Allegiance[] = [
           'Horde and objective spam punish it hard',
           'Losing a single Knight is a major swing',
         ],
-        teamRole:
-          'A specialist — steer it into elite and low-model armies.',
+        teamRole: 'A specialist — steer it into elite and low-model armies.',
         pairingTip:
           'Like Imperial Knights, counter-pick it and keep it clear of hordes when dropping blind.',
       },
@@ -449,10 +438,8 @@ export const allegiances: Allegiance[] = [
           'Some detachments are more swingy than others',
           'Premium cost on its elite pieces',
         ],
-        teamRole:
-          'A flexible anchor that drops comfortably into most matchups.',
-        pairingTip:
-          'A safe blind pick; it adapts across the field much like loyalist Marines.',
+        teamRole: 'A flexible anchor that drops comfortably into most matchups.',
+        pairingTip: 'A safe blind pick; it adapts across the field much like loyalist Marines.',
       },
       {
         key: 'death_guard',
@@ -475,8 +462,7 @@ export const allegiances: Allegiance[] = [
           'Modest damage ceiling',
           'Can be out-scored on pace by a faster list',
         ],
-        teamRole:
-          'A stubborn Defender that refuses to die and holds its half of the board.',
+        teamRole: 'A stubborn Defender that refuses to die and holds its half of the board.',
         pairingTip:
           'A very safe blind drop: rarely tabled and rarely blown out, whatever it faces.',
       },
@@ -501,8 +487,7 @@ export const allegiances: Allegiance[] = [
           'Reliant on chaining its rules together',
           'Can run out of steam in a long game',
         ],
-        teamRole:
-          'A target-priority Attacker aimed at the opponent’s high-value pieces.',
+        teamRole: 'A target-priority Attacker aimed at the opponent’s high-value pieces.',
         pairingTip:
           'Fine blind, best when a juicy target to burst down is likely to be on the table.',
       },
@@ -527,8 +512,7 @@ export const allegiances: Allegiance[] = [
           'Fragile bodies outside their buffs',
           'Sequencing-heavy with a steep skill floor',
         ],
-        teamRole:
-          'A specialist — steer it into durable, buff-reliant targets it can bypass.',
+        teamRole: 'A specialist — steer it into durable, buff-reliant targets it can bypass.',
         pairingTip:
           'Risky blind; counter-pick it into high-toughness or heavily-buffed armies where mortals shine.',
       },
@@ -553,8 +537,7 @@ export const allegiances: Allegiance[] = [
           'Feast-or-famine — swings hard on the charge',
           'Screened and blocked out by a disciplined board',
         ],
-        teamRole:
-          'A dedicated Attacker you throw at a melee-soft Defender.',
+        teamRole: 'A dedicated Attacker you throw at a melee-soft Defender.',
         pairingTip:
           'The definition of a counter-pick army — never blind-drop it into a gunline or heavy screen.',
       },
@@ -586,8 +569,7 @@ export const allegiances: Allegiance[] = [
           'Brutally punishing of pilot misplays',
           'Premium points cost',
         ],
-        teamRole:
-          'A skilled pilot’s flex that its speed lets you steer into almost any matchup.',
+        teamRole: 'A skilled pilot’s flex that its speed lets you steer into almost any matchup.',
         pairingTip:
           'In expert hands it drops safely blind — mobility lets it dictate terms even into a rough draw.',
       },
@@ -612,10 +594,8 @@ export const allegiances: Allegiance[] = [
           'Falls apart if the strike stalls or trades down',
           'Unforgiving of any misfire',
         ],
-        teamRole:
-          'A glass-cannon Attacker — counter-pick it into fragile lists it can overrun.',
-        pairingTip:
-          'High-variance blind; deploy it as the counter, not as a blind anchor.',
+        teamRole: 'A glass-cannon Attacker — counter-pick it into fragile lists it can overrun.',
+        pairingTip: 'High-variance blind; deploy it as the counter, not as a blind anchor.',
       },
       {
         key: 'genestealer_cults',
@@ -638,8 +618,7 @@ export const allegiances: Allegiance[] = [
           'Timing-dependent — a mistimed reveal wastes the turn',
           'Complex to pilot to its ceiling',
         ],
-        teamRole:
-          'A tricky secondary-scorer/flex that stresses the opponent’s whole board.',
+        teamRole: 'A tricky secondary-scorer/flex that stresses the opponent’s whole board.',
         pairingTip:
           'Reserves keep it flexible blind; especially strong dropped into static gunlines.',
       },
@@ -664,10 +643,8 @@ export const allegiances: Allegiance[] = [
           'Low model count strains coverage',
           'Can be out-maneuvered by faster armies',
         ],
-        teamRole:
-          'A dependable shooting anchor/Defender that holds its ground.',
-        pairingTip:
-          'A safe blind drop: consistent output keeps games close whatever it faces.',
+        teamRole: 'A dependable shooting anchor/Defender that holds its ground.',
+        pairingTip: 'A safe blind drop: consistent output keeps games close whatever it faces.',
       },
       {
         key: 'necrons',
@@ -690,10 +667,8 @@ export const allegiances: Allegiance[] = [
           'Premium characters and support pieces',
           'Modest ceiling without the right engagements',
         ],
-        teamRole:
-          'A rock-solid anchor/Defender that grinds and holds.',
-        pairingTip:
-          'One of the safest blind picks; very hard to blow out across the field.',
+        teamRole: 'A rock-solid anchor/Defender that grinds and holds.',
+        pairingTip: 'One of the safest blind picks; very hard to blow out across the field.',
       },
       {
         key: 'orks',
@@ -716,10 +691,8 @@ export const allegiances: Allegiance[] = [
           'Leadership and mass-wipe risk',
           'Less reliable than a disciplined gunline',
         ],
-        teamRole:
-          'A board-flooding flex/Attacker that shines into low-model armies.',
-        pairingTip:
-          'Fine blind, and a natural answer to Knights and other elite, low-count lists.',
+        teamRole: 'A board-flooding flex/Attacker that shines into low-model armies.',
+        pairingTip: 'Fine blind, and a natural answer to Knights and other elite, low-count lists.',
       },
       {
         key: 'tau',
@@ -742,8 +715,7 @@ export const allegiances: Allegiance[] = [
           'Reliant on screens to hold the enemy off',
           'Punished hard by fast alpha-strike lists',
         ],
-        teamRole:
-          'A shooting specialist — steer it away from fast melee.',
+        teamRole: 'A shooting specialist — steer it away from fast melee.',
         pairingTip:
           'Drop it into shooting or static matchups; keep it well clear of alpha-strike melee.',
       },
@@ -768,8 +740,7 @@ export const allegiances: Allegiance[] = [
           'Complex to manage turn to turn',
           'Individual bio-forms can be brittle off-buff',
         ],
-        teamRole:
-          'An adaptable flex/anchor that rounds out the team.',
+        teamRole: 'An adaptable flex/anchor that rounds out the team.',
         pairingTip:
           'Flexible blind; its wave depth keeps most games competitive whatever you draw.',
       },

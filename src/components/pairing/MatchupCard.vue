@@ -96,9 +96,13 @@ function dispAccent(key: DispositionKey) {
           <span v-else class="logo-fallback">·</span>
         </div>
         <span class="prow-name">{{ factionName(matchup.playerA.faction) }}</span>
-        <span class="prow-role" :class="roleA ? `role-${roleA.toLowerCase()}` : ''">{{ roleA }}</span>
+        <span class="prow-role" :class="roleA ? `role-${roleA.toLowerCase()}` : ''">{{
+          roleA
+        }}</span>
         <span class="prow-disp" :style="dispA ? dispAccent(dispA.key) : undefined">
-          <template v-if="dispA"><DispositionIcon :symbol="dispA.symbol" />{{ dispA.name }}</template>
+          <template v-if="dispA"
+            ><DispositionIcon :symbol="dispA.symbol" />{{ dispA.name }}</template
+          >
         </span>
       </div>
 
@@ -116,9 +120,13 @@ function dispAccent(key: DispositionKey) {
           <span v-else class="logo-fallback">·</span>
         </div>
         <span class="prow-name">{{ factionName(matchup.playerB.faction) }}</span>
-        <span class="prow-role" :class="roleB ? `role-${roleB.toLowerCase()}` : ''">{{ roleB }}</span>
+        <span class="prow-role" :class="roleB ? `role-${roleB.toLowerCase()}` : ''">{{
+          roleB
+        }}</span>
         <span class="prow-disp" :style="dispB ? dispAccent(dispB.key) : undefined">
-          <template v-if="dispB"><DispositionIcon :symbol="dispB.symbol" />{{ dispB.name }}</template>
+          <template v-if="dispB"
+            ><DispositionIcon :symbol="dispB.symbol" />{{ dispB.name }}</template
+          >
         </span>
       </div>
     </div>

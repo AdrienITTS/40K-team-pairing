@@ -171,59 +171,59 @@ const stepLabel = computed(() => {
     </header>
 
     <Transition name="phase" mode="out-in">
-    <!-- Selection phases, gated behind the device handoff -->
-    <HandoffGate v-if="actor" :key="phaseKey" :team-side="actor" :team-name="teamName(actor)">
-      <div class="select-panel">
-        <p class="instruction">
-          <template v-if="phase.kind === 'defender-select'">
-            {{ teamName(actor) }} — pick the player to hold your table as Defender.
-          </template>
-          <template v-else-if="phase.kind === 'attackers-select'">
-            Pick <strong>two</strong> Attackers to send against {{ teamName(opposing(actor)) }}'s
-            Defender.
-          </template>
-          <template v-else-if="phase.kind === 'counter-select'">
-            Choose which of {{ teamName(opposing(actor)) }}'s two Attackers your Defender
-            <strong>{{ factionName(player(ownDefenderId)?.faction ?? null) }}</strong> will face.
-          </template>
-        </p>
+      <!-- Selection phases, gated behind the device handoff -->
+      <HandoffGate v-if="actor" :key="phaseKey" :team-side="actor" :team-name="teamName(actor)">
+        <div class="select-panel">
+          <p class="instruction">
+            <template v-if="phase.kind === 'defender-select'">
+              {{ teamName(actor) }} — pick the player to hold your table as Defender.
+            </template>
+            <template v-else-if="phase.kind === 'attackers-select'">
+              Pick <strong>two</strong> Attackers to send against {{ teamName(opposing(actor)) }}'s
+              Defender.
+            </template>
+            <template v-else-if="phase.kind === 'counter-select'">
+              Choose which of {{ teamName(opposing(actor)) }}'s two Attackers your Defender
+              <strong>{{ factionName(player(ownDefenderId)?.faction ?? null) }}</strong> will face.
+            </template>
+          </p>
 
-        <ul class="option-grid" :class="selectRole ? `sel-${selectRole}` : ''">
-          <li v-for="opt in options" :key="opt.id">
-            <button
-              type="button"
-              class="option"
-              :class="{ selected: isSelected(opt.id) }"
-              :aria-label="factionName(opt.faction)"
-              :title="factionName(opt.faction)"
-              @click="toggle(opt.id)"
-            >
-              <span class="option-logo">
-                <img
-                  v-if="opt.faction"
-                  :src="`/images/factions/${opt.faction}.png`"
-                  :alt="factionName(opt.faction)"
-                  width="44"
-                  height="44"
-                  loading="lazy"
-                />
-                <span v-else>·</span>
-              </span>
-              <span v-if="isSelected(opt.id)" class="check" aria-hidden="true">✓</span>
+          <ul class="option-grid" :class="selectRole ? `sel-${selectRole}` : ''">
+            <li v-for="opt in options" :key="opt.id">
+              <button
+                type="button"
+                class="option"
+                :class="{ selected: isSelected(opt.id) }"
+                :aria-label="factionName(opt.faction)"
+                :title="factionName(opt.faction)"
+                @click="toggle(opt.id)"
+              >
+                <span class="option-logo">
+                  <img
+                    v-if="opt.faction"
+                    :src="`/images/factions/${opt.faction}.png`"
+                    :alt="factionName(opt.faction)"
+                    width="44"
+                    height="44"
+                    loading="lazy"
+                  />
+                  <span v-else>·</span>
+                </span>
+                <span v-if="isSelected(opt.id)" class="check" aria-hidden="true">✓</span>
+              </button>
+            </li>
+          </ul>
+
+          <div class="actions">
+            <span v-if="selectMode === 'double'" class="hint">
+              {{ selected.length }} / 2 selected
+            </span>
+            <button type="button" class="btn-primary" :disabled="confirmDisabled" @click="confirm">
+              Lock in →
             </button>
-          </li>
-        </ul>
-
-        <div class="actions">
-          <span v-if="selectMode === 'double'" class="hint">
-            {{ selected.length }} / 2 selected
-          </span>
-          <button type="button" class="btn-primary" :disabled="confirmDisabled" @click="confirm">
-            Lock in →
-          </button>
+          </div>
         </div>
-      </div>
-    </HandoffGate>
+      </HandoffGate>
     </Transition>
   </div>
 </template>

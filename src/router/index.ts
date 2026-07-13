@@ -47,6 +47,11 @@ const router = createRouter({
       name: 'layouts',
       component: () => import('../views/LayoutsView.vue'),
     },
+    {
+      path: '/analysis/vs-dispositions',
+      name: 'analysis-vs-dispositions',
+      component: () => import('../views/AnalysisVsDispositionsView.vue'),
+    },
   ],
   // Smoothly return to the top on every navigation (e.g. the home page's
   // redirecting buttons/links), while preserving the saved position on

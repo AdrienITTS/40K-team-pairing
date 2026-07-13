@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { dispositionName, getDisposition, type DispositionKey } from '../../data/dispositions'
-import { layoutImages, LAYOUT_LETTERS, type LayoutLetter, type LayoutVariant } from '../../data/layouts'
+import {
+  layoutImages,
+  LAYOUT_LETTERS,
+  type LayoutLetter,
+  type LayoutVariant,
+} from '../../data/layouts'
 import DispositionIcon from '../DispositionIcon.vue'
 
 /**
@@ -119,7 +124,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       >
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
       </button>
-      <button type="button" class="lightbox-close" aria-label="Close" @click="emit('close')">✕</button>
+      <button type="button" class="lightbox-close" aria-label="Close" @click="emit('close')">
+        ✕
+      </button>
     </div>
   </Transition>
 </template>

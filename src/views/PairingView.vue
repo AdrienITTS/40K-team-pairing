@@ -54,80 +54,80 @@ function onLayout(matchupId: string, value: LayoutLetter) {
     </section>
 
     <div class="pairing-body">
-    <!-- 1 · Setup -->
-    <section v-if="!state" class="panel">
-      <h2 v-if="setupStep === 1" class="panel-title">Set up the round</h2>
-      <PairingSetup v-model:step="setupStep" @start="session.start" />
-    </section>
+      <!-- 1 · Setup -->
+      <section v-if="!state" class="panel">
+        <h2 v-if="setupStep === 1" class="panel-title">Set up the round</h2>
+        <PairingSetup v-model:step="setupStep" @start="session.start" />
+      </section>
 
-    <!-- 2 · Running the modules -->
-    <template v-else-if="!isComplete">
-      <div class="progress">
-        <div class="progress-bar">
-          <span class="progress-fill" :style="{ width: `${(decided / teamSize) * 100}%` }" />
+      <!-- 2 · Running the modules -->
+      <template v-else-if="!isComplete">
+        <div class="progress">
+          <div class="progress-bar">
+            <span class="progress-fill" :style="{ width: `${(decided / teamSize) * 100}%` }" />
+          </div>
+          <span class="progress-text">{{ decided }} / {{ teamSize }} tables set</span>
+          <button type="button" class="text-link reset" :disabled="!canUndo" @click="session.back">
+            ← Previous choice
+          </button>
         </div>
-        <span class="progress-text">{{ decided }} / {{ teamSize }} tables set</span>
-        <button
-          type="button"
-          class="text-link reset"
-          :disabled="!canUndo"
-          @click="session.back"
-        >
-          ← Previous choice
-        </button>
-      </div>
 
-      <div class="live">
-        <PairingBoard :state="state" @layout="onLayout" @view-layout="layoutRequest = $event" />
+        <div class="live">
+          <PairingBoard :state="state" @layout="onLayout" @view-layout="layoutRequest = $event" />
 
-        <section class="panel">
-          <PairingRunner
-            :state="state"
-            @defender="session.defender"
-            @attackers="session.attackers"
-            @counter="session.counter"
-            @next="session.next"
+          <section class="panel">
+            <PairingRunner
+              :state="state"
+              @defender="session.defender"
+              @attackers="session.attackers"
+              @counter="session.counter"
+              @next="session.next"
+            />
+          </section>
+        </div>
+      </template>
+
+      <!-- 3 · Results -->
+      <template v-else>
+        <div class="results-head">
+          <div>
+            <h2 class="panel-title">Round {{ state.config.round }} pairings</h2>
+            <p class="results-sub">
+              <span class="team-key team-a">{{ state.config.teamA.name }}</span> vs
+              <span class="team-key team-b">{{ state.config.teamB.name }}</span> ·
+              {{ teamSize }} tables · fixed layouts use Layout
+              {{ layoutForRound(state.config.round) }} this round
+            </p>
+          </div>
+          <div class="results-actions">
+            <button type="button" class="btn-secondary" @click="session.reset">
+              Change rosters
+            </button>
+            <button type="button" class="btn-primary" @click="session.restart">
+              New pairing →
+            </button>
+          </div>
+        </div>
+
+        <div class="results-grid">
+          <MatchupCard
+            v-for="(m, i) in state.matchups"
+            :key="m.id"
+            :matchup="m"
+            :index="i + 1"
+            :team-a-name="state.config.teamA.name"
+            :team-b-name="state.config.teamB.name"
+            @layout="(value) => onLayout(m.id, value)"
+            @view-layout="layoutRequest = $event"
           />
-        </section>
-      </div>
-    </template>
-
-    <!-- 3 · Results -->
-    <template v-else>
-      <div class="results-head">
-        <div>
-          <h2 class="panel-title">Round {{ state.config.round }} pairings</h2>
-          <p class="results-sub">
-            <span class="team-key team-a">{{ state.config.teamA.name }}</span> vs
-            <span class="team-key team-b">{{ state.config.teamB.name }}</span> · {{ teamSize }}
-            tables · fixed layouts use Layout {{ layoutForRound(state.config.round) }} this round
-          </p>
         </div>
-        <div class="results-actions">
-          <button type="button" class="btn-secondary" @click="session.reset">Change rosters</button>
-          <button type="button" class="btn-primary" @click="session.restart">New pairing →</button>
-        </div>
-      </div>
 
-      <div class="results-grid">
-        <MatchupCard
-          v-for="(m, i) in state.matchups"
-          :key="m.id"
-          :matchup="m"
-          :index="i + 1"
-          :team-a-name="state.config.teamA.name"
-          :team-b-name="state.config.teamB.name"
-          @layout="(value) => onLayout(m.id, value)"
-          @view-layout="layoutRequest = $event"
-        />
-      </div>
-
-      <p class="results-note">
-        Defender match-ups: the Defender declares Layout A, B or C. Refused Attacker and Champion
-        tables roll off for Attacker/Defender and use the fixed layout for the round. Where both
-        players set a Force Disposition, “View layout” shows the terrain maps for that table.
-      </p>
-    </template>
+        <p class="results-note">
+          Defender match-ups: the Defender declares Layout A, B or C. Refused Attacker and Champion
+          tables roll off for Attacker/Defender and use the fixed layout for the round. Where both
+          players set a Force Disposition, “View layout” shows the terrain maps for that table.
+        </p>
+      </template>
     </div>
 
     <LayoutLightbox :request="layoutRequest" @close="layoutRequest = null" />

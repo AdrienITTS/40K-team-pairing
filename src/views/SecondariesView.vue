@@ -120,57 +120,57 @@ onUnmounted(() => {
     </section>
 
     <Transition name="list" mode="out-in" @after-enter="remeasure">
-    <ul v-if="!current" key="list" class="mosaic" aria-label="Select a secondary mission">
-      <li v-for="(m, i) in secondaryMissions" :key="m.key">
-        <button type="button" class="mosaic-chip" @click="select(i)">
-          {{ m.name }}
-        </button>
-      </li>
-    </ul>
-
-    <section
-      v-else
-      key="detail"
-      class="carousel"
-      aria-roledescription="carousel"
-      aria-label="Secondary missions"
-    >
-      <div class="carousel-frame" :class="{ 'carousel-frame--text': view === 'text' }">
-        <nav class="detail-bar" aria-label="Carousel controls">
-          <button type="button" class="arrow" aria-label="Previous mission" @click="go(-1)">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+      <ul v-if="!current" key="list" class="mosaic" aria-label="Select a secondary mission">
+        <li v-for="(m, i) in secondaryMissions" :key="m.key">
+          <button type="button" class="mosaic-chip" @click="select(i)">
+            {{ m.name }}
           </button>
-          <p class="counter" aria-live="polite">
-            <span class="counter-name">{{ current.name }}</span>
-            <span class="counter-index">{{ selected! + 1 }} / {{ total }}</span>
-          </p>
-          <button type="button" class="arrow" aria-label="Next mission" @click="go(1)">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-          </button>
-        </nav>
+        </li>
+      </ul>
 
-        <div ref="stage" class="stage">
-          <Transition name="swap" mode="out-in">
-            <figure v-if="view === 'image'" key="image" class="card-image">
-              <img
-                :src="`/images/secondaries/${current.key}.png`"
-                :alt="`${current.name} secondary mission card`"
-                :style="imageStyle"
-                loading="lazy"
-              />
-            </figure>
+      <section
+        v-else
+        key="detail"
+        class="carousel"
+        aria-roledescription="carousel"
+        aria-label="Secondary missions"
+      >
+        <div class="carousel-frame" :class="{ 'carousel-frame--text': view === 'text' }">
+          <nav class="detail-bar" aria-label="Carousel controls">
+            <button type="button" class="arrow" aria-label="Previous mission" @click="go(-1)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>
+            </button>
+            <p class="counter" aria-live="polite">
+              <span class="counter-name">{{ current.name }}</span>
+              <span class="counter-index">{{ selected! + 1 }} / {{ total }}</span>
+            </p>
+            <button type="button" class="arrow" aria-label="Next mission" @click="go(1)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+            </button>
+          </nav>
 
-            <SecondaryMissionCard v-else key="text" :mission="current" :style="textCardStyle" />
-          </Transition>
-        </div>
+          <div ref="stage" class="stage">
+            <Transition name="swap" mode="out-in">
+              <figure v-if="view === 'image'" key="image" class="card-image">
+                <img
+                  :src="`/images/secondaries/${current.key}.png`"
+                  :alt="`${current.name} secondary mission card`"
+                  :style="imageStyle"
+                  loading="lazy"
+                />
+              </figure>
 
-        <!-- Off-screen stack used only to measure the tallest secondary so the
+              <SecondaryMissionCard v-else key="text" :mission="current" :style="textCardStyle" />
+            </Transition>
+          </div>
+
+          <!-- Off-screen stack used only to measure the tallest secondary so the
              text card can be pinned to a constant height. -->
-        <div v-if="view === 'text'" ref="measurer" class="rules-measurer" aria-hidden="true">
-          <SecondaryMissionCard v-for="m in secondaryMissions" :key="m.key" :mission="m" />
+          <div v-if="view === 'text'" ref="measurer" class="rules-measurer" aria-hidden="true">
+            <SecondaryMissionCard v-for="m in secondaryMissions" :key="m.key" :mission="m" />
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
     </Transition>
   </main>
 </template>

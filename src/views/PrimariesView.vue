@@ -19,15 +19,19 @@ const facedAccent = (key: DispositionKey) => ({
 })
 const facedSymbol = (key: DispositionKey) => getDisposition(key).symbol
 
-// Modal showing the source card image, or its text scoring (toggleable).
+// Modal showing the source card image, or its text scoring (toggleable). When the
+// card has a reverse (an action), `face` flips the image between front and back.
 const active = ref<PrimaryMission | null>(null)
 const view = ref<'image' | 'text'>('image')
+const face = ref<'front' | 'back'>('front')
 function open(p: PrimaryMission) {
   active.value = p
   view.value = 'image'
+  face.value = 'front'
 }
 const close = () => (active.value = null)
 const toggleView = () => (view.value = view.value === 'image' ? 'text' : 'image')
+const flipFace = () => (face.value = face.value === 'front' ? 'back' : 'front')
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape') close()
 }
@@ -63,12 +67,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       </header>
 
       <ul class="mission-grid" :aria-label="`${g.disposition.name} primary missions`">
-        <li
-          v-for="p in g.missions"
-          :key="p.slug"
-          class="mission"
-          :style="facedAccent(p.faced)"
-        >
+        <li v-for="p in g.missions" :key="p.slug" class="mission" :style="facedAccent(p.faced)">
           <button
             type="button"
             class="thumb"
@@ -113,13 +112,24 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             </button>
           </div>
           <Transition name="fade" mode="out-in">
-            <img
-              v-if="view === 'image'"
-              key="image"
-              class="lightbox-img"
-              :src="`/images/primaries/${active.slug}.png`"
-              :alt="`${active.name} primary mission card`"
-            />
+            <figure v-if="view === 'image'" key="image" class="lightbox-figure">
+              <img
+                class="lightbox-img"
+                :src="`/images/primaries/${active.slug}${face === 'back' ? '-back' : ''}.png`"
+                :alt="`${active.name} primary mission card${face === 'back' ? ' — reverse (action)' : ''}`"
+              />
+              <button
+                v-if="active.hasBack"
+                type="button"
+                class="flip"
+                :aria-pressed="face === 'back'"
+                :aria-label="face === 'front' ? 'Show back of card (action)' : 'Show front of card'"
+                @click="flipFace"
+              >
+                <span class="flip-icon" aria-hidden="true">⇄</span>
+                {{ face === 'front' ? 'Action' : 'Front' }}
+              </button>
+            </figure>
             <PrimaryMissionCard v-else key="text" :mission="active" class="lightbox-text" />
           </Transition>
         </div>
@@ -318,13 +328,57 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   border-color: var(--color-primary-active);
 }
 
+/* Wraps the card image so the flip button anchors to its bottom-right corner.
+   The card art is always 1653×2833, so we size this box to that exact ratio —
+   bounded by height (84vh) and width (440px, or the viewport on small screens) —
+   so it hugs the rendered image and the corner button sits flush against it. */
+.lightbox-figure {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 1653 / 2833;
+  height: min(84vh, calc(440px * 2833 / 1653), calc((100vw - 2 * var(--spacing-lg)) * 2833 / 1653));
+}
+
 .lightbox-img {
   display: block;
-  max-width: min(440px, 100%);
-  max-height: 84vh;
-  width: auto;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   border-radius: var(--radius-lg);
+}
+
+/* Corner control that flips the card between its front and its action (reverse).
+   Anchored flush to the card's bottom-right corner, at double the base height. */
+.flip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xxs);
+  min-height: 48px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  /* Round the outer corner to match the card, and the inner top-left to nest. */
+  border-radius: var(--radius-md) 0 var(--radius-lg) 0;
+  padding: var(--spacing-xs) var(--spacing-md);
+  cursor: pointer;
+}
+
+.flip:hover,
+.flip:focus-visible {
+  background: var(--color-primary-active);
+  border-color: var(--color-primary-active);
+}
+
+.flip-icon {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .lightbox-text {

@@ -7,14 +7,16 @@ import { useTheme } from './composables/useTheme'
 const { theme, toggleTheme } = useTheme()
 
 // Header dropdown groups. Only one is open at a time.
-type MenuKey = 'setup' | 'scoring'
+type MenuKey = 'setup' | 'scoring' | 'analysis'
 const route = useRoute()
 const openMenu = ref<MenuKey | null>(null)
 
 const setupPaths = ['/dispositions', '/layouts']
 const scoringPaths = ['/primaries', '/secondaries']
+const analysisPaths = ['/analysis/vs-dispositions']
 const isSetupActive = computed(() => setupPaths.includes(route.path))
 const isScoringActive = computed(() => scoringPaths.includes(route.path))
+const isAnalysisActive = computed(() => analysisPaths.includes(route.path))
 
 function toggleMenu(key: MenuKey) {
   openMenu.value = openMenu.value === key ? null : key
@@ -70,7 +72,9 @@ onUnmounted(() => {
             @click="toggleMenu('setup')"
           >
             Setting up
-            <svg class="caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            <svg class="caret" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
           </button>
           <div v-if="openMenu === 'setup'" class="nav-menu" role="menu">
             <RouterLink to="/dispositions" class="nav-menu-item" role="menuitem">
@@ -90,12 +94,35 @@ onUnmounted(() => {
             @click="toggleMenu('scoring')"
           >
             Scoring
-            <svg class="caret" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+            <svg class="caret" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
           </button>
           <div v-if="openMenu === 'scoring'" class="nav-menu" role="menu">
             <RouterLink to="/primaries" class="nav-menu-item" role="menuitem">Primaries</RouterLink>
             <RouterLink to="/secondaries" class="nav-menu-item" role="menuitem">
               Secondaries
+            </RouterLink>
+          </div>
+        </div>
+
+        <div class="nav-group">
+          <button
+            type="button"
+            class="nav-link nav-trigger"
+            :class="{ active: isAnalysisActive || openMenu === 'analysis' }"
+            aria-haspopup="true"
+            :aria-expanded="openMenu === 'analysis'"
+            @click="toggleMenu('analysis')"
+          >
+            Analysis
+            <svg class="caret" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          <div v-if="openMenu === 'analysis'" class="nav-menu" role="menu">
+            <RouterLink to="/analysis/vs-dispositions" class="nav-menu-item" role="menuitem">
+              vs. Dispositions
             </RouterLink>
           </div>
         </div>

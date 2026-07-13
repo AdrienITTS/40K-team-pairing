@@ -141,8 +141,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </li>
         </ul>
         <p v-if="step === 2 && mine" class="pick-hint">
-          You chose <strong>{{ dispositionName(mine) }}</strong> — now pick who you're facing (it may
-          be the same Disposition).
+          You chose <strong>{{ dispositionName(mine) }}</strong> — now pick who you're facing (it
+          may be the same Disposition).
         </p>
       </section>
 
@@ -151,7 +151,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <div class="matchup-bar">
           <div class="matchup-sides">
             <span class="side" :style="accent(mine!)">
-              <span class="side-symbol"><DispositionIcon :symbol="getDisposition(mine!).symbol" /></span>
+              <span class="side-symbol"
+                ><DispositionIcon :symbol="getDisposition(mine!).symbol"
+              /></span>
               <span class="side-meta">
                 <span class="side-label">You · {{ dispositionName(mine!) }}</span>
                 <span class="side-mission">{{ myMission }}</span>
@@ -163,7 +165,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
                 <span class="side-label">Opponent · {{ dispositionName(theirs!) }}</span>
                 <span class="side-mission">{{ theirMission }}</span>
               </span>
-              <span class="side-symbol"><DispositionIcon :symbol="getDisposition(theirs!).symbol" /></span>
+              <span class="side-symbol"
+                ><DispositionIcon :symbol="getDisposition(theirs!).symbol"
+              /></span>
             </span>
           </div>
 
@@ -211,7 +215,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         <figure class="lb-figure" @click.stop>
           <img :src="maps[lightbox]?.src" :alt="`Layout ${maps[lightbox]?.letter}`" />
           <figcaption>
-            <span class="lb-caption-text">Layout {{ maps[lightbox]?.letter }} · {{ lightbox + 1 }} / 3</span>
+            <span class="lb-caption-text"
+              >Layout {{ maps[lightbox]?.letter }} · {{ lightbox + 1 }} / 3</span
+            >
             <button
               type="button"
               class="lb-measure"

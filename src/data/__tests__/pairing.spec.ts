@@ -541,9 +541,7 @@ describe('helpers', () => {
           state = proceed(state)
       }
     }
-    const withA = state.matchups.find(
-      (m) => m.playerA.id === 'a-0' || m.playerB.id === 'a-0',
-    )!
+    const withA = state.matchups.find((m) => m.playerA.id === 'a-0' || m.playerB.id === 'a-0')!
     const slotA = withA.playerA.id === 'a-0' ? withA.playerA : withA.playerB
     expect(slotA.disposition).toBe('take-and-hold')
   })

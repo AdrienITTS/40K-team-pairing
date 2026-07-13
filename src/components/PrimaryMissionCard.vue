@@ -49,11 +49,28 @@ const accent = {
       </ul>
     </div>
 
+    <!-- The action printed on the card's reverse, when it has a back face. -->
+    <section v-if="mission.action" class="action">
+      <p class="action-label">Action — reverse</p>
+      <h3 class="action-title">{{ mission.action.title }}</h3>
+      <dl class="action-rows">
+        <template v-for="(row, ri) in mission.action.rows" :key="ri">
+          <dt>{{ row.k }}</dt>
+          <!-- Values are trusted, build-time HTML from the source card data. -->
+          <dd v-html="row.v"></dd>
+        </template>
+      </dl>
+    </section>
+
     <footer class="foot">
       <span class="faced-chip"><DispositionIcon :symbol="facedSymbol" /></span>
       <span class="foot-label">Opponent</span>
       <span class="foot-name">
-        {{ mission.mirror ? `${dispositionName(mission.faced)} — Mirror` : dispositionName(mission.faced) }}
+        {{
+          mission.mirror
+            ? `${dispositionName(mission.faced)} — Mirror`
+            : dispositionName(mission.faced)
+        }}
       </span>
     </footer>
   </div>
@@ -215,6 +232,56 @@ const accent = {
   font-weight: 700;
   letter-spacing: 1px;
   margin-top: 2px;
+}
+
+/* The reverse-side action, rendered as a labelled rules panel. */
+.action {
+  border: 1px solid var(--you);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-top: var(--spacing-md);
+}
+
+.action-label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--you);
+}
+
+.action-title {
+  font-family: var(--font-display);
+  font-size: 19px;
+  letter-spacing: -0.3px;
+  margin: 2px 0 var(--spacing-xs);
+  color: var(--color-ink);
+}
+
+.action-rows {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--spacing-sm);
+  row-gap: var(--spacing-xxs);
+}
+
+.action-rows dt {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  padding-top: 1px;
+  white-space: nowrap;
+}
+
+.action-rows dd {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-body-strong);
 }
 
 .foot {

@@ -104,7 +104,12 @@ function dispAccent(key: DispositionKey) {
     </div>
 
     <ul class="rows">
-      <li v-for="(row, i) in layout.rows" :key="i" class="row" :class="{ committed: row.committed }">
+      <li
+        v-for="(row, i) in layout.rows"
+        :key="i"
+        class="row"
+        :class="{ committed: row.committed }"
+      >
         <div class="matchup-line">
           <div class="cell" :class="cellClass(row.a)">
             <template v-if="row.a">
@@ -206,7 +211,12 @@ function dispAccent(key: DispositionKey) {
       <p class="pool-label">Waiting</p>
       <div class="pool-columns">
         <ul v-for="pool in pools" :key="pool.side" class="pool-col">
-          <li v-for="slot in pool.slots" :key="slot.player.id" class="chip" :class="cellClass(slot)">
+          <li
+            v-for="slot in pool.slots"
+            :key="slot.player.id"
+            class="chip"
+            :class="cellClass(slot)"
+          >
             <div class="logo-tile">
               <img
                 v-if="slot.player.faction"

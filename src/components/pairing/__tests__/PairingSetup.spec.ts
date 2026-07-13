@@ -8,9 +8,7 @@ function mountPicker() {
 }
 
 function chip(wrapper: ReturnType<typeof mountPicker>, name: string) {
-  return wrapper
-    .findAll('.faction-chip.side-a')
-    .find((c) => c.find('.chip-name').text() === name)!
+  return wrapper.findAll('.faction-chip.side-a').find((c) => c.find('.chip-name').text() === name)!
 }
 
 describe('PairingSetup — one Space Marine Chapter per team', () => {

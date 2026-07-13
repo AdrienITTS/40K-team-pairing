@@ -63,11 +63,28 @@ export interface PrimarySection {
   tiers: PrimaryTier[]
 }
 
+/** One labelled row of an action's rules panel (from the card's reverse). */
+export interface PrimaryActionRow {
+  /** Label, e.g. "Starts", "Units", "Use limit", "Completes", "Effect". */
+  k: string
+  /** Value text as trusted, build-time HTML (bold terms already wrapped). */
+  v: string
+}
+
+/** The action printed on the reverse of some Primary cards. */
+export interface PrimaryAction {
+  /** The action's name (card header on the reverse). */
+  title: string
+  rows: PrimaryActionRow[]
+}
+
 /** The card's textual content (scoring, plus an optional standalone rule box). */
 export interface PrimaryContent {
   /** A rule/effect box shown on some cards (HTML). */
   rule?: string
   sections: PrimarySection[]
+  /** The action on the card's reverse, shown when it has a back face. */
+  action?: PrimaryAction
 }
 
 export interface PrimaryMission extends PrimaryContent {
@@ -80,6 +97,8 @@ export interface PrimaryMission extends PrimaryContent {
   faced: DispositionKey
   /** True when you and your opponent brought the same Disposition (a "mirror"). */
   mirror: boolean
+  /** True when the card has a reverse face (an action). */
+  hasBack: boolean
 }
 
 // Canonical order: by the Disposition you play, then by the one you face — the
@@ -97,6 +116,8 @@ export const primaryMissions: PrimaryMission[] = dispositions.flatMap((d) =>
       mirror: d.key === m.opponent,
       rule: content.rule,
       sections: content.sections,
+      action: content.action,
+      hasBack: content.action !== undefined,
     }
   }),
 )
