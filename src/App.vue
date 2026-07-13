@@ -25,14 +25,27 @@ function closeMenus() {
   openMenu.value = null
 }
 
-// Close on navigation, on Escape, and on any click outside a nav group.
-watch(() => route.path, closeMenus)
+// Mobile drawer (below the header breakpoint). Independent of the desktop dropdowns.
+const mobileOpen = ref(false)
+const toggleMobile = () => (mobileOpen.value = !mobileOpen.value)
+
+// Close menus on navigation, on Escape, and on any click outside a nav group.
+watch(
+  () => route.path,
+  () => {
+    closeMenus()
+    mobileOpen.value = false
+  },
+)
 function onDocClick(e: MouseEvent) {
   const el = e.target as HTMLElement | null
   if (!el?.closest('.nav-group')) closeMenus()
 }
 function onKey(e: KeyboardEvent) {
-  if (e.key === 'Escape') closeMenus()
+  if (e.key === 'Escape') {
+    closeMenus()
+    mobileOpen.value = false
+  }
 }
 onMounted(() => {
   document.addEventListener('click', onDocClick)
@@ -57,7 +70,7 @@ onUnmounted(() => {
         />
       </RouterLink>
 
-      <nav>
+      <nav class="site-nav">
         <RouterLink to="/" class="nav-link">Home</RouterLink>
 
         <RouterLink to="/how-it-works" class="nav-link">Rules</RouterLink>
@@ -167,9 +180,47 @@ onUnmounted(() => {
           </svg>
         </button>
 
-        <RouterLink to="/pairing" class="btn-primary">Start Pairing</RouterLink>
+        <RouterLink to="/pairing" class="btn-primary start-pairing">Start Pairing</RouterLink>
+
+        <button
+          type="button"
+          class="hamburger"
+          :class="{ open: mobileOpen }"
+          :aria-expanded="mobileOpen"
+          aria-controls="mobile-nav"
+          aria-label="Menu"
+          @click="toggleMobile"
+        >
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </div>
+
+    <!-- Mobile drawer, shown below the header breakpoint. -->
+    <Transition name="drawer">
+      <nav v-if="mobileOpen" id="mobile-nav" class="mobile-nav container">
+        <RouterLink to="/" class="mobile-link">Home</RouterLink>
+        <RouterLink to="/how-it-works" class="mobile-link">Rules</RouterLink>
+
+        <p class="mobile-group-label">Setting up</p>
+        <RouterLink to="/dispositions" class="mobile-link mobile-sub">Dispositions</RouterLink>
+        <RouterLink to="/layouts" class="mobile-link mobile-sub">Layouts</RouterLink>
+
+        <p class="mobile-group-label">Scoring</p>
+        <RouterLink to="/primaries" class="mobile-link mobile-sub">Primaries</RouterLink>
+        <RouterLink to="/secondaries" class="mobile-link mobile-sub">Secondaries</RouterLink>
+
+        <p class="mobile-group-label">Analysis</p>
+        <RouterLink to="/analysis/vs-dispositions" class="mobile-link mobile-sub">
+          vs. Dispositions
+        </RouterLink>
+
+        <RouterLink to="/factions" class="mobile-link">Factions</RouterLink>
+
+        <RouterLink to="/pairing" class="btn-primary mobile-cta">Start Pairing</RouterLink>
+      </nav>
+    </Transition>
+    <div v-if="mobileOpen" class="mobile-scrim" @click="toggleMobile"></div>
   </header>
 
   <RouterView v-slot="{ Component }">
@@ -183,6 +234,8 @@ onUnmounted(() => {
 
 <style scoped>
 .site-header {
+  position: relative;
+  z-index: 40;
   background: var(--color-canvas);
   border-bottom: 1px solid var(--color-hairline);
 }
@@ -204,7 +257,7 @@ onUnmounted(() => {
   border-radius: var(--radius-sm);
 }
 
-nav {
+.site-nav {
   display: flex;
   align-items: center;
   gap: var(--spacing-xxs);
@@ -331,5 +384,143 @@ nav {
 .theme-toggle svg {
   width: 18px;
   height: 18px;
+}
+
+/* --- Hamburger + mobile drawer --- */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-hairline);
+  background: var(--color-surface-card);
+  cursor: pointer;
+}
+
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-ink);
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.hamburger.open span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.hamburger.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.hamburger.open span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.mobile-nav {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--spacing-sm);
+  padding-bottom: var(--spacing-md);
+  max-height: calc(100dvh - 64px);
+  overflow-y: auto;
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-hairline);
+}
+
+.mobile-link {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 var(--spacing-sm);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-body);
+}
+
+.mobile-link:hover,
+.mobile-link.router-link-exact-active {
+  background: var(--color-surface-card);
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.mobile-sub {
+  padding-left: var(--spacing-md);
+}
+
+.mobile-group-label {
+  margin-top: var(--spacing-sm);
+  padding: 0 var(--spacing-sm);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.mobile-cta {
+  margin-top: var(--spacing-md);
+  justify-content: center;
+  height: 48px;
+  font-size: 16px;
+}
+
+.mobile-scrim {
+  position: fixed;
+  inset: 64px 0 0;
+  z-index: 39;
+  background: var(--color-scrim);
+}
+
+.drawer-enter-active,
+.drawer-leave-active {
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.drawer-enter-from,
+.drawer-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+@media (max-width: 820px) {
+  .site-nav {
+    display: none;
+  }
+
+  .start-pairing {
+    display: none;
+  }
+
+  .hamburger {
+    display: flex;
+  }
+}
+
+@media (max-width: 480px) {
+  .site-header-inner {
+    padding-left: var(--spacing-md);
+    padding-right: var(--spacing-md);
+  }
 }
 </style>

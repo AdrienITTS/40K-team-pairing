@@ -746,6 +746,47 @@ h2 {
   .tips {
     grid-template-columns: 1fr;
   }
+
+  /* Tighten the matrix and pin the row-header column so the Disposition label
+     stays visible while the cells scroll horizontally. */
+  .matrix {
+    min-width: 0;
+    border-spacing: 3px;
+  }
+
+  .corner,
+  .row-head {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--color-canvas);
+  }
+
+  .row-head {
+    padding-right: var(--spacing-xs);
+  }
+
+  .row-name {
+    font-size: 12px;
+  }
+
+  .chip.filled {
+    margin-right: 4px;
+  }
+
+  .col-head {
+    min-width: 52px;
+  }
+
+  .col-name {
+    font-size: 10px;
+  }
+
+  .cell {
+    min-width: 46px;
+    padding: var(--spacing-xs) 0;
+    font-size: 17px;
+  }
 }
 
 @media (max-width: 560px) {

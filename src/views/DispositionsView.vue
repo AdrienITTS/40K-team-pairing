@@ -136,7 +136,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 .grid {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  /* min(320px, 100%) keeps the track from demanding 320px on a narrower
+     viewport, so the cards never force horizontal overflow. */
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
   gap: var(--spacing-md);
 }
 
@@ -334,6 +336,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  /* Fixed layout stops the matchup table from expanding to its content's
+     intrinsic width (the nowrap opponent names) on narrow phones. */
+  .matrix {
+    table-layout: fixed;
+  }
+
+  .opp-name {
+    white-space: normal;
   }
 }
 </style>

@@ -239,6 +239,15 @@ Player B Battle Points    <span class="highlight">4</span>`
   padding-bottom: var(--spacing-section);
 }
 
+/* Each section is a `.container` (max-width + margin:0 auto). Inside this flex
+   column, auto cross-axis margins would otherwise suppress `stretch` and let a
+   section grow to its max-content (overflowing on mobile); width:100% + min-width:0
+   keeps them viewport-bound while still centering within max-width on desktop. */
+.home > section {
+  width: 100%;
+  min-width: 0;
+}
+
 /* Hero */
 
 .hero {
@@ -296,6 +305,9 @@ Player B Battle Points    <span class="highlight">4</span>`
 /* Feature grid */
 
 .features {
+  /* min-width:0 lets this flex-item grid shrink below its intrinsic track
+     width so `auto-fit` collapses to fewer columns instead of overflowing. */
+  min-width: 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--spacing-lg);
