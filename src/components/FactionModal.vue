@@ -37,7 +37,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
           <div class="modal-head">
             <div class="modal-logo">
               <img
-                :src="`/images/factions/${faction.key}.png`"
+                :src="`/images/factions/${faction.key}.webp`"
                 :alt="`${faction.name} logo`"
                 width="56"
                 height="56"

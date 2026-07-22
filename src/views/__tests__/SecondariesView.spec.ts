@@ -25,7 +25,7 @@ describe('SecondariesView', () => {
     expect(wrapper.find('.counter-name').text()).toBe(first.name)
     // Image is the default view; the text pane is not rendered yet.
     expect(wrapper.find('.card-image img').attributes('src')).toBe(
-      `/images/secondaries/${first.key}.png`,
+      `/images/secondaries/${first.key}.webp`,
     )
     expect(wrapper.find('.rules').exists()).toBe(false)
   })

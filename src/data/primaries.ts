@@ -1,7 +1,7 @@
 // Primary Mission data, sourced from https://gdmissions.app/11th/primary-missions/
 // <you>/<slug>. As with the Force Disposition cards, each mission is rendered by
 // the source app as a single full-bleed card PNG (downloaded to
-// /images/primaries/<slug>.png from /assets/11th/primary-missions/<you>/<slug>.png).
+// /images/primaries/<slug>.webp from /assets/11th/primary-missions/<you>/<slug>.png).
 // The card's scoring rules live on the image; here we model only what's needed to
 // organise and label them.
 //

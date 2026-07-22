@@ -38,7 +38,7 @@ function closeFaction() {
           <button type="button" class="faction-card" @click="openFaction(faction)">
             <div class="logo-tile">
               <img
-                :src="`/images/factions/${faction.key}.png`"
+                :src="`/images/factions/${faction.key}.webp`"
                 :alt="`${faction.name} logo`"
                 width="48"
                 height="48"

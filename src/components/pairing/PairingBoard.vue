@@ -116,7 +116,7 @@ function dispAccent(key: DispositionKey) {
               <div class="logo-tile">
                 <img
                   v-if="row.a.player.faction"
-                  :src="`/images/factions/${row.a.player.faction}.png`"
+                  :src="`/images/factions/${row.a.player.faction}.webp`"
                   :alt="row.a.player.faction"
                   width="28"
                   height="28"
@@ -145,7 +145,7 @@ function dispAccent(key: DispositionKey) {
               <div class="logo-tile">
                 <img
                   v-if="row.b.player.faction"
-                  :src="`/images/factions/${row.b.player.faction}.png`"
+                  :src="`/images/factions/${row.b.player.faction}.webp`"
                   :alt="row.b.player.faction"
                   width="28"
                   height="28"
@@ -220,7 +220,7 @@ function dispAccent(key: DispositionKey) {
             <div class="logo-tile">
               <img
                 v-if="slot.player.faction"
-                :src="`/images/factions/${slot.player.faction}.png`"
+                :src="`/images/factions/${slot.player.faction}.webp`"
                 :alt="slot.player.faction"
                 width="24"
                 height="24"

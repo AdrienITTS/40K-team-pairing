@@ -1,7 +1,7 @@
 // Force Disposition data, transcribed from the cards at
 // https://gdmissions.app/11th/force-disposition/<key>. The source app renders
 // each disposition as a single full-bleed card image (downloaded to
-// /images/dispositions/<key>.png); the only structured content on a card is the
+// /images/dispositions/<key>.webp); the only structured content on a card is the
 // opponent → Primary-Mission table captured in `matchups` below, read off the
 // card art. Accent colours were sampled from that art and live as
 // `--color-disposition-<key>` tokens in base.css. Taglines/descriptions are

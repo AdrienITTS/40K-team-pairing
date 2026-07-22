@@ -51,7 +51,7 @@ interface RefCard {
   kind: 'image' | 'layout' | 'dispositions' | 'initials'
   /** For `image` / `layout` kinds. */
   image?: string
-  /** `image` kind only: the faction logo is a padded transparent PNG — contain, don't crop. */
+  /** `image` kind only: the faction logo is a padded transparent WebP — contain, don't crop. */
   contain?: boolean
   /** `initials` kind only. */
   initials?: string
@@ -65,7 +65,7 @@ const references: RefCard[] = [
     text: 'Every codex profiled on the blind-pairing axis: archetype, damage range, and how hard the army swings across the field.',
     to: '/factions',
     kind: 'image',
-    image: '/images/factions/space_marines.png',
+    image: '/images/factions/space_marines.webp',
     contain: true,
   },
   {
@@ -81,9 +81,11 @@ const references: RefCard[] = [
     text: 'Three terrain layouts for every Disposition pairing, with the official measurements.',
     to: '/layouts',
     kind: 'layout',
-    // Pre-cropped to just the board (title band, labels and legend removed) — see
-    // public/images/home/deployment-map.png.
-    image: '/images/home/deployment-map.png',
+    // Take and Hold vs Priority Assets, Layout A, re-cropped from the Event
+    // Companion PDF to the board alone — no edge markers or paper margin, unlike
+    // the /images/layouts/ set. Deliberately a separate file: this one is sized
+    // for a thumbnail (852px) and framed to survive the 90° rotation below.
+    image: '/images/home/deployment-map.webp',
   },
   {
     title: 'Primary Missions',
@@ -142,7 +144,7 @@ Player B Battle Points    <span class="highlight">4</span>`
       </div>
 
       <div class="hero-art">
-        <img alt="Les Bastonneurs" src="/images/logo.png" width="220" height="210" />
+        <img alt="Les Bastonneurs" src="/images/logo.webp" width="220" height="210" />
       </div>
     </section>
 

@@ -153,7 +153,7 @@ onUnmounted(() => {
             <Transition name="swap" mode="out-in">
               <figure v-if="view === 'image'" key="image" class="card-image">
                 <img
-                  :src="`/images/secondaries/${current.key}.png`"
+                  :src="`/images/secondaries/${current.key}.webp`"
                   :alt="`${current.name} secondary mission card`"
                   :style="imageStyle"
                   loading="lazy"

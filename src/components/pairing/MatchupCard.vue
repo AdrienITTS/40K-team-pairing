@@ -87,7 +87,7 @@ function dispAccent(key: DispositionKey) {
         <div class="logo-tile">
           <img
             v-if="matchup.playerA.faction"
-            :src="`/images/factions/${matchup.playerA.faction}.png`"
+            :src="`/images/factions/${matchup.playerA.faction}.webp`"
             :alt="matchup.playerA.faction"
             width="34"
             height="34"
@@ -111,7 +111,7 @@ function dispAccent(key: DispositionKey) {
         <div class="logo-tile">
           <img
             v-if="matchup.playerB.faction"
-            :src="`/images/factions/${matchup.playerB.faction}.png`"
+            :src="`/images/factions/${matchup.playerB.faction}.webp`"
             :alt="matchup.playerB.faction"
             width="34"
             height="34"

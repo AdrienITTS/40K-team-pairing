@@ -10,7 +10,7 @@ import { RouterLink } from 'vue-router'
           <img
             alt="Les Bastonneurs"
             class="brand-logo"
-            src="/images/logo.png"
+            src="/images/logo.webp"
             width="28"
             height="28"
           />

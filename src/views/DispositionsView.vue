@@ -99,7 +99,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
         @click="close"
       >
         <img
-          :src="`/images/dispositions/${active.key}.png`"
+          :src="`/images/dispositions/${active.key}.webp`"
           :alt="`${active.name} Force Disposition card`"
           @click.stop
         />

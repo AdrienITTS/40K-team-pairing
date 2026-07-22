@@ -75,7 +75,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             @click="open(p)"
           >
             <img
-              :src="`/images/primaries/${p.slug}.png`"
+              :src="`/images/primaries/${p.slug}.webp`"
               :alt="`${p.name} primary mission card`"
               loading="lazy"
             />
@@ -115,7 +115,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             <figure v-if="view === 'image'" key="image" class="lightbox-figure">
               <img
                 class="lightbox-img"
-                :src="`/images/primaries/${active.slug}${face === 'back' ? '-back' : ''}.png`"
+                :src="`/images/primaries/${active.slug}${face === 'back' ? '-back' : ''}.webp`"
                 :alt="`${active.name} primary mission card${face === 'back' ? ' — reverse (action)' : ''}`"
               />
               <button

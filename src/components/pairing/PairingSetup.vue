@@ -260,7 +260,7 @@ function submit() {
               >
                 <span class="chip-tile">
                   <img
-                    :src="`/images/factions/${f.key}.png`"
+                    :src="`/images/factions/${f.key}.webp`"
                     :alt="f.name"
                     width="40"
                     height="40"
@@ -302,7 +302,7 @@ function submit() {
             <span class="disp-faction">
               <span class="chip-tile">
                 <img
-                  :src="`/images/factions/${key}.png`"
+                  :src="`/images/factions/${key}.webp`"
                   :alt="factionName(key)"
                   width="40"
                   height="40"
@@ -361,7 +361,7 @@ function submit() {
               >
                 <span class="chip-tile">
                   <img
-                    :src="`/images/factions/${f.key}.png`"
+                    :src="`/images/factions/${f.key}.webp`"
                     :alt="f.name"
                     width="40"
                     height="40"
@@ -403,7 +403,7 @@ function submit() {
             <span class="disp-faction">
               <span class="chip-tile">
                 <img
-                  :src="`/images/factions/${key}.png`"
+                  :src="`/images/factions/${key}.webp`"
                   :alt="factionName(key)"
                   width="40"
                   height="40"

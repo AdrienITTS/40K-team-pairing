@@ -1,5 +1,5 @@
 // AUTO-GENERATED from https://gdmissions.app/11th/secondary-missions/<slug>-defender.
-// Each mission's card image lives at /images/secondaries/<key>.png.
+// Each mission's card image lives at /images/secondaries/<key>.webp.
 // Regenerate with scripts/extract secondary data rather than hand-editing.
 
 /** One scoring line within a section. `text` is an HTML string. */

@@ -64,7 +64,7 @@ onUnmounted(() => {
         <img
           alt="Les Bastonneurs"
           class="brand-logo"
-          src="/images/logo.png"
+          src="/images/logo.webp"
           width="36"
           height="36"
         />

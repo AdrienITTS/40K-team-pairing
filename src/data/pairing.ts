@@ -25,7 +25,7 @@ export type LayoutLetter = 'A' | 'B' | 'C'
 
 export interface Player {
   id: string
-  /** Faction key (matches `public/images/factions/<key>.png`), or null. */
+  /** Faction key (matches `public/images/factions/<key>.webp`), or null. */
   faction: string | null
   /**
    * The player's chosen Force Disposition (see GAME.MD § 1), or null if not

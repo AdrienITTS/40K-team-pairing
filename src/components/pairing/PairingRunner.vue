@@ -201,7 +201,7 @@ const stepLabel = computed(() => {
                 <span class="option-logo">
                   <img
                     v-if="opt.faction"
-                    :src="`/images/factions/${opt.faction}.png`"
+                    :src="`/images/factions/${opt.faction}.webp`"
                     :alt="factionName(opt.faction)"
                     width="44"
                     height="44"
