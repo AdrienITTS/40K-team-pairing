@@ -13,7 +13,7 @@ const openMenu = ref<MenuKey | null>(null)
 
 const setupPaths = ['/dispositions', '/layouts']
 const scoringPaths = ['/primaries', '/secondaries']
-const analysisPaths = ['/analysis/vs-dispositions']
+const analysisPaths = ['/analysis/vs-dispositions', '/analysis/detachments']
 const isSetupActive = computed(() => setupPaths.includes(route.path))
 const isScoringActive = computed(() => scoringPaths.includes(route.path))
 const isAnalysisActive = computed(() => analysisPaths.includes(route.path))
@@ -137,6 +137,9 @@ onUnmounted(() => {
             <RouterLink to="/analysis/vs-dispositions" class="nav-menu-item" role="menuitem">
               vs. Dispositions
             </RouterLink>
+            <RouterLink to="/analysis/detachments" class="nav-menu-item" role="menuitem">
+              Detachments
+            </RouterLink>
           </div>
         </div>
 
@@ -213,6 +216,9 @@ onUnmounted(() => {
         <p class="mobile-group-label">Analysis</p>
         <RouterLink to="/analysis/vs-dispositions" class="mobile-link mobile-sub">
           vs. Dispositions
+        </RouterLink>
+        <RouterLink to="/analysis/detachments" class="mobile-link mobile-sub">
+          Detachments
         </RouterLink>
 
         <RouterLink to="/factions" class="mobile-link">Factions</RouterLink>
