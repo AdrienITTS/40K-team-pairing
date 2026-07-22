@@ -25,7 +25,7 @@ Built with Vue 3 + TypeScript + Vite.
   printed card image or as structured text, with keyboard-navigable browsing.
 - **Deployment Layouts** (`/layouts`) — a 3-step picker (your Disposition, your
   opponent's, then the maps) that shows the three A/B/C terrain layouts for that
-  pairing, with a measurements toggle and a click-to-zoom lightbox.
+  pairing, with a click-to-zoom lightbox.
 
 The domain logic (pairing modules, the VP→BP conversion table, win/draw
 thresholds, and Team Point scoring) follows `GAME.MD`, the bundled Teams Event

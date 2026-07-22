@@ -78,7 +78,7 @@ const references: RefCard[] = [
   {
     title: 'Deployment layouts',
     count: '45 maps',
-    text: 'Three terrain layouts for every Disposition pairing, clean or measurement-annotated.',
+    text: 'Three terrain layouts for every Disposition pairing, with the official measurements.',
     to: '/layouts',
     kind: 'layout',
     // Pre-cropped to just the board (title band, labels and legend removed) — see

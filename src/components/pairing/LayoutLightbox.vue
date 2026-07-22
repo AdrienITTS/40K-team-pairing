@@ -1,12 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { dispositionName, getDisposition, type DispositionKey } from '../../data/dispositions'
-import {
-  layoutImages,
-  LAYOUT_LETTERS,
-  type LayoutLetter,
-  type LayoutVariant,
-} from '../../data/layouts'
+import { layoutImages, LAYOUT_LETTERS, type LayoutLetter } from '../../data/layouts'
 import DispositionIcon from '../DispositionIcon.vue'
 
 /**
@@ -14,9 +9,9 @@ import DispositionIcon from '../DispositionIcon.vue'
  * pairing shares (see LayoutsView for the same data on its own page). Opened
  * from a live board row or a result card once both players have Dispositions;
  * `request` carries the pairing and which letter to open on. Emits `close` when
- * dismissed. Flips between A/B/C and the measurement-annotated art in place —
- * unless `fixed`, in which case only the single layout the table will play is
- * shown (Refused Attacker / Champion tables, whose layout is set by the round).
+ * dismissed. Flips between A/B/C in place — unless `fixed`, in which case only
+ * the single layout the table will play is shown (Refused Attacker / Champion
+ * tables, whose layout is set by the round).
  */
 const props = defineProps<{
   request: { a: DispositionKey; b: DispositionKey; letter: LayoutLetter; fixed?: boolean } | null
@@ -25,16 +20,8 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>()
 
 const index = ref(0)
-const variant = ref<LayoutVariant>('no-measurements')
 
 const isFixed = computed(() => props.request?.fixed ?? false)
-
-const showMeasurements = computed({
-  get: () => variant.value === 'with-measurements',
-  set: (on: boolean) => {
-    variant.value = on ? 'with-measurements' : 'no-measurements'
-  },
-})
 
 // Reset to the requested letter each time a new pairing is opened.
 watch(
@@ -45,9 +32,7 @@ watch(
   { immediate: true },
 )
 
-const maps = computed(() =>
-  props.request ? layoutImages(props.request.a, props.request.b, variant.value) : [],
-)
+const maps = computed(() => (props.request ? layoutImages(props.request.a, props.request.b) : []))
 const current = computed(() => maps.value[index.value] ?? null)
 
 function go(delta: number) {
@@ -104,14 +89,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           <span class="lb-caption-text">
             Layout {{ current?.letter }}<template v-if="!isFixed"> · {{ index + 1 }} / 3</template>
           </span>
-          <button
-            type="button"
-            class="lb-measure"
-            :aria-pressed="showMeasurements"
-            @click="showMeasurements = !showMeasurements"
-          >
-            {{ showMeasurements ? 'Hide measurements' : 'Show measurements' }}
-          </button>
         </figcaption>
       </figure>
 
@@ -212,24 +189,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-pill);
   padding: var(--spacing-xxs) var(--spacing-md);
-}
-
-.lb-measure {
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-on-primary);
-  background: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-pill);
-  padding: var(--spacing-xxs) var(--spacing-md);
-  cursor: pointer;
-}
-
-.lb-measure:hover,
-.lb-measure:focus-visible {
-  background: var(--color-primary-active);
-  border-color: var(--color-primary-active);
 }
 
 .lb-arrow {

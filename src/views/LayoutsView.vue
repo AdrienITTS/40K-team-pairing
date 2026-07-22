@@ -6,7 +6,7 @@ import {
   dispositionName,
   type DispositionKey,
 } from '../data/dispositions'
-import { layoutImages, LAYOUT_LETTERS, type LayoutVariant } from '../data/layouts'
+import { layoutImages, LAYOUT_LETTERS } from '../data/layouts'
 import DispositionIcon from '../components/DispositionIcon.vue'
 
 // Inline custom-property bindings keep the disposition accent a token reference
@@ -21,18 +21,10 @@ function accent(key: DispositionKey) {
 const step = ref<1 | 2 | 3>(1)
 const mine = ref<DispositionKey | null>(null)
 const theirs = ref<DispositionKey | null>(null)
-const variant = ref<LayoutVariant>('no-measurements')
 const lightbox = ref<number | null>(null)
 
-const showMeasurements = computed({
-  get: () => variant.value === 'with-measurements',
-  set: (on: boolean) => {
-    variant.value = on ? 'with-measurements' : 'no-measurements'
-  },
-})
-
 const maps = computed(() =>
-  mine.value && theirs.value ? layoutImages(mine.value, theirs.value, variant.value) : [],
+  mine.value && theirs.value ? layoutImages(mine.value, theirs.value) : [],
 )
 
 // The Primary Mission each side plays is set by the disposition matchup: you
@@ -172,10 +164,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
           </div>
 
           <div class="result-actions">
-            <label class="measure-toggle">
-              <input v-model="showMeasurements" type="checkbox" />
-              <span>Measurements</span>
-            </label>
             <button type="button" class="restart" @click="restart">New matchup</button>
           </div>
         </div>
@@ -218,14 +206,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
             <span class="lb-caption-text"
               >Layout {{ maps[lightbox]?.letter }} · {{ lightbox + 1 }} / 3</span
             >
-            <button
-              type="button"
-              class="lb-measure"
-              :aria-pressed="showMeasurements"
-              @click="showMeasurements = !showMeasurements"
-            >
-              {{ showMeasurements ? 'Hide measurements' : 'Show measurements' }}
-            </button>
           </figcaption>
         </figure>
         <button
@@ -505,23 +485,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   gap: var(--spacing-sm);
 }
 
-.measure-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-xs);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-body-strong);
-  cursor: pointer;
-}
-
-.measure-toggle input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--color-primary);
-  cursor: pointer;
-}
-
 .restart {
   font-family: var(--font-body);
   font-size: 13px;
@@ -646,25 +609,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-pill);
   padding: var(--spacing-xxs) var(--spacing-md);
-}
-
-/* Switch the enlarged map between the clean and measurement-annotated art. */
-.lb-measure {
-  font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-on-primary);
-  background: var(--color-primary);
-  border: 1px solid var(--color-primary);
-  border-radius: var(--radius-pill);
-  padding: var(--spacing-xxs) var(--spacing-md);
-  cursor: pointer;
-}
-
-.lb-measure:hover,
-.lb-measure:focus-visible {
-  background: var(--color-primary-active);
-  border-color: var(--color-primary-active);
 }
 
 .lb-arrow {

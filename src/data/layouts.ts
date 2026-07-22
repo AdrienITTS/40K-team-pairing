@@ -1,77 +1,43 @@
-// Deployment-map layouts, sourced from https://gdmissions.app/11th/layouts/
-// <disposition>/<disposition>. Each unordered pair of Force Dispositions has
-// three terrain layouts (the source numbers them 1–3; we surface them as
-// A / B / C). The source renders each as a full-bleed PNG, in two variants —
-// clean and measurement-annotated — downloaded to
-// /images/layouts/<variant>/<slug>-<n>.png.
+// Deployment-map layouts, extracted from the official Warhammer 40,000 Event
+// Companion PDF (version 1.1, 22 July 2026), pages 9-53 — one page per layout.
+// Each unordered pair of Force Dispositions has three terrain layouts (the PDF
+// labels them A / B / C, matching how we surface them). Each page was cropped to
+// the battlefield plus its attacker/defender edge markers and saved as
+// /images/layouts/<slug>-<n>.webp. The PDF's maps carry their measurements baked
+// in, so there is a single set of art — no clean variant.
 //
 // The layout depends only on the *pair* of dispositions in play (the terrain is
-// shared by both players), so it is stored once per unordered pair. The source's
-// canonical filename ordering is irregular — most pairs read as "<a>-vs-<b>" but
-// some are stored reversed (e.g. `disruption-vs-purge-the-foe`), and the
-// take-and-hold mirror is the special `take-and-hold-mirror` — so the exact
-// stems are recorded verbatim below rather than derived, and resolved by
-// unordered pair via `layoutSlug`.
+// shared by both players), so it is stored once per unordered pair, keyed by a
+// "<a>-vs-<b>" slug whose two halves are in canonical disposition order — hence
+// `layoutSlug` derives the stem rather than looking it up, and resolves either
+// disposition order to the same one.
 
-import type { DispositionKey } from './dispositions'
+import { dispositions, type DispositionKey } from './dispositions'
 
-/** Whether the map is the clean board or the measurement-annotated version. */
-export type LayoutVariant = 'no-measurements' | 'with-measurements'
-
-/** Display letters for the three layouts of a pairing (source numbers them 1–3). */
+/** Display letters for the three layouts of a pairing (the PDF labels them A-C). */
 export const LAYOUT_LETTERS = ['A', 'B', 'C'] as const
 export type LayoutLetter = (typeof LAYOUT_LETTERS)[number]
 
-/** The three terrain layouts shared by an unordered pair of Force Dispositions. */
-export interface LayoutSet {
-  /** The unordered disposition pair these maps belong to. */
-  pair: [DispositionKey, DispositionKey]
-  /** Canonical image-basename stem, e.g. "take-and-hold-vs-purge-the-foe". */
-  slug: string
-}
-
-export const layoutSets: LayoutSet[] = [
-  { pair: ['take-and-hold', 'take-and-hold'], slug: 'take-and-hold-mirror' },
-  { pair: ['take-and-hold', 'purge-the-foe'], slug: 'take-and-hold-vs-purge-the-foe' },
-  { pair: ['take-and-hold', 'disruption'], slug: 'take-and-hold-vs-disruption' },
-  { pair: ['take-and-hold', 'reconnaissance'], slug: 'take-and-hold-vs-reconnaissance' },
-  { pair: ['take-and-hold', 'priority-assets'], slug: 'take-and-hold-vs-priority-assets' },
-  { pair: ['purge-the-foe', 'purge-the-foe'], slug: 'purge-the-foe-vs-purge-the-foe' },
-  { pair: ['purge-the-foe', 'disruption'], slug: 'disruption-vs-purge-the-foe' },
-  { pair: ['purge-the-foe', 'reconnaissance'], slug: 'purge-the-foe-vs-reconnaissance' },
-  { pair: ['purge-the-foe', 'priority-assets'], slug: 'purge-the-foe-vs-priority-assets' },
-  { pair: ['disruption', 'disruption'], slug: 'disruption-vs-disruption' },
-  { pair: ['disruption', 'reconnaissance'], slug: 'disruption-vs-reconnaissance' },
-  { pair: ['disruption', 'priority-assets'], slug: 'disruption-vs-priority-assets' },
-  { pair: ['reconnaissance', 'reconnaissance'], slug: 'reconnaissance-vs-reconnaissance' },
-  { pair: ['reconnaissance', 'priority-assets'], slug: 'priority-assets-vs-reconnaissance' },
-  { pair: ['priority-assets', 'priority-assets'], slug: 'priority-assets-vs-priority-assets' },
-]
-
-/** Order-independent key for an unordered disposition pair. */
-function pairKey(a: DispositionKey, b: DispositionKey): string {
-  return [a, b].sort().join('|')
-}
-
-const setsByPair = new Map(layoutSets.map((s) => [pairKey(...s.pair), s]))
+/** Canonical disposition order, which fixes the two halves of every slug. */
+const ORDER: DispositionKey[] = dispositions.map((d) => d.key)
 
 /**
  * Canonical image stem for the layouts shared by two dispositions, in either
- * order. Every unordered pair is present, so this always resolves.
+ * order, e.g. "take-and-hold-vs-purge-the-foe".
  */
 export function layoutSlug(a: DispositionKey, b: DispositionKey): string {
-  return setsByPair.get(pairKey(a, b))!.slug
+  const [first, second] = [a, b].sort((x, y) => ORDER.indexOf(x) - ORDER.indexOf(y))
+  return `${first}-vs-${second}`
 }
 
-/** Runtime paths to the three A/B/C layout images for a pairing and variant. */
+/** Runtime paths to the three A/B/C layout images for a pairing. */
 export function layoutImages(
   a: DispositionKey,
   b: DispositionKey,
-  variant: LayoutVariant,
 ): { letter: LayoutLetter; src: string }[] {
   const slug = layoutSlug(a, b)
   return LAYOUT_LETTERS.map((letter, i) => ({
     letter,
-    src: `/images/layouts/${variant}/${slug}-${i + 1}.png`,
+    src: `/images/layouts/${slug}-${i + 1}.webp`,
   }))
 }

@@ -19,20 +19,7 @@ describe('LayoutsView', () => {
 
     const maps = wrapper.findAll('.map-card img')
     expect(maps).toHaveLength(3)
-    expect(maps[0]!.attributes('src')).toBe(
-      '/images/layouts/no-measurements/take-and-hold-vs-purge-the-foe-1.png',
-    )
-  })
-
-  it('toggles the measurement variant of the map images', async () => {
-    const wrapper = mount(LayoutsView)
-    await wrapper.findAll('.disp-chip')[0]!.trigger('click')
-    await wrapper.findAll('.disp-chip')[1]!.trigger('click')
-
-    await wrapper.find('.measure-toggle input').setValue(true)
-    expect(wrapper.find('.map-card img').attributes('src')).toBe(
-      '/images/layouts/with-measurements/take-and-hold-vs-purge-the-foe-1.png',
-    )
+    expect(maps[0]!.attributes('src')).toBe('/images/layouts/take-and-hold-vs-purge-the-foe-1.webp')
   })
 
   it('opens the lightbox when a map is clicked', async () => {
@@ -45,20 +32,9 @@ describe('LayoutsView', () => {
     const lb = wrapper.find('.lightbox')
     expect(lb.exists()).toBe(true)
     expect(lb.find('figcaption').text()).toContain('Layout B')
-  })
-
-  it('switches the measurement variant from inside the lightbox', async () => {
-    const wrapper = mount(LayoutsView)
-    await wrapper.findAll('.disp-chip')[0]!.trigger('click')
-    await wrapper.findAll('.disp-chip')[1]!.trigger('click')
-    await wrapper.findAll('.map-btn')[0]!.trigger('click')
-
-    const img = () => wrapper.find('.lb-figure img').attributes('src')
-    expect(img()).toBe('/images/layouts/no-measurements/take-and-hold-vs-purge-the-foe-1.png')
-
-    await wrapper.find('.lb-measure').trigger('click')
-    expect(img()).toBe('/images/layouts/with-measurements/take-and-hold-vs-purge-the-foe-1.png')
-    // The grid behind it reflects the same switch.
-    expect(wrapper.find('.map-card img').attributes('src')).toContain('with-measurements')
+    // The lightbox shows the map that was clicked, not the first of the three.
+    expect(lb.find('img').attributes('src')).toBe(
+      '/images/layouts/take-and-hold-vs-purge-the-foe-2.webp',
+    )
   })
 })
