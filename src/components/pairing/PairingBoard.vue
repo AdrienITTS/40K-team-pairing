@@ -100,7 +100,6 @@ function dispAccent(key: DispositionKey) {
           <span class="team-dot" />
         </span>
       </div>
-      <span class="team-heads-table" aria-hidden="true" />
     </div>
 
     <ul class="rows">
@@ -256,10 +255,10 @@ function dispAccent(key: DispositionKey) {
 
 <style scoped>
 .board {
-  /* Width reserved at the end of each match-up line for its table choice (and
-     the view-layout button), kept in sync between the rows and the team-heads
-     so columns stay aligned. */
-  --table-col-width: 172px;
+  /* Queried below so the waiting pool can go two-up. It has to be the board's
+     own width, not the viewport's: the estimates rail takes its width out of
+     the board while the viewport stays exactly as wide as it was. */
+  container-type: inline-size;
   background: var(--color-surface-card);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
@@ -300,12 +299,6 @@ function dispAccent(key: DispositionKey) {
   gap: var(--spacing-sm);
 }
 
-/* Mirror the per-row table slot so the team names sit over their cells. */
-.team-heads-table {
-  width: var(--table-col-width);
-  flex-shrink: 0;
-}
-
 .team-head {
   display: flex;
   align-items: center;
@@ -342,10 +335,13 @@ function dispAccent(key: DispositionKey) {
   gap: var(--spacing-xs);
 }
 
+/* The match-up line spans the full board width; its table choice (when the row
+   is committed) stacks beneath it, right-aligned, so the cells always reach the
+   right edge and line up with the waiting pool. */
 .row {
   display: flex;
-  align-items: center;
-  gap: var(--spacing-sm);
+  flex-direction: column;
+  gap: var(--spacing-xxs);
 }
 
 .matchup-line {
@@ -362,12 +358,16 @@ function dispAccent(key: DispositionKey) {
 }
 
 .row-table {
-  width: var(--table-col-width);
-  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: var(--spacing-xs);
+}
+
+/* Pending rows (and committed rows without a table choice) render an empty
+   slot — drop it so it adds no stray gap under the match-up line. */
+.row-table:empty {
+  display: none;
 }
 
 .row-layout-label {
@@ -580,11 +580,30 @@ function dispAccent(key: DispositionKey) {
   gap: var(--spacing-sm);
 }
 
+/* Grid items default to min-width:auto, so a long faction name would push the
+   chip past its track and out of the board card once the page narrows (which
+   the estimates rail does). Pin the tracks to 0 and let the names ellipsise. */
 .pool-col {
   list-style: none;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xxs);
+}
+
+/* Given the room, each team's waiting chips go two across rather than one — an
+   eight-player round then costs the pool four lines instead of eight, which is
+   what keeps the whole board on screen beside the selection card. */
+@container (min-width: 860px) {
+  .pool-col {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+  }
+}
+
+.chip {
+  min-width: 0;
 }
 
 .chip {
@@ -640,30 +659,49 @@ function dispAccent(key: DispositionKey) {
   color: var(--color-muted);
 }
 
-@media (max-width: 640px) {
-  .team-heads-inner {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-xxs);
+@media (max-width: 720px) {
+  .board {
+    padding: var(--spacing-sm);
+    gap: var(--spacing-sm);
   }
 
-  .team-heads-table {
-    display: none;
+  /* The two team headings stay side by side even on a phone: they are the key
+     to which column of the waiting pool belongs to whom, so collapsing them to
+     one line would leave the pool unlabelled. Only the table-choice gutter,
+     which no longer sits inline, is dropped. */
+  .team-heads-inner {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-xs);
   }
 
   .team-head-spacer {
     display: none;
   }
 
-  /* Stack the table choice back under the match-up on narrow screens. */
-  .row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--spacing-xxs);
+  /* The name is a bare text node beside the dot, so it clips on the flex
+     container rather than carrying its own ellipsis. */
+  .team-head {
+    font-size: 12px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
   }
 
-  .row-table {
-    width: auto;
-    justify-content: flex-end;
+  /* Separate the stacked rows with a hairline on narrow screens. */
+  .row {
+    padding-bottom: var(--spacing-xs);
+    border-bottom: 1px solid var(--color-hairline-soft);
+  }
+
+  .rows > .row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .layout-btn,
+  .row-view {
+    width: 34px;
+    height: 34px;
   }
 
   .matchup-line {
@@ -675,8 +713,18 @@ function dispAccent(key: DispositionKey) {
     justify-self: center;
   }
 
+  /* Keep the pool two-up so each chip stays under its own team heading. */
   .pool-columns {
-    grid-template-columns: 1fr;
+    gap: var(--spacing-xs);
+  }
+
+  .chip {
+    padding: var(--spacing-xxs);
+    gap: var(--spacing-xxs);
+  }
+
+  .chip .cell-name {
+    font-size: 12px;
   }
 }
 </style>

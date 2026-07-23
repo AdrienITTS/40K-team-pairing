@@ -69,6 +69,24 @@
   --color-rating-veryhigh: #2f8f57;
   --color-rating-veryhigh-fg: #eafaf0;
 
+  /* Matchup estimate grades — a seven-band diverging scale for the pre-round
+     estimate grid, from great loss (red) through the three draw shades (neutral)
+     to great victory (green). Each band carries its own foreground (`-fg`). */
+  --color-grade-gw: #2f8f57;
+  --color-grade-gw-fg: #eafaf0;
+  --color-grade-w: #6bab7d;
+  --color-grade-w-fg: #0d2c19;
+  --color-grade-dplus: #c3d1bd;
+  --color-grade-dplus-fg: #2c3a27;
+  --color-grade-d: #d8d2c4;
+  --color-grade-d-fg: #4a4637;
+  --color-grade-dminus: #e2cdb4;
+  --color-grade-dminus-fg: #4a3721;
+  --color-grade-l: #d68a3c;
+  --color-grade-l-fg: #3a2609;
+  --color-grade-gl: #b23b2f;
+  --color-grade-gl-fg: #fdece9;
+
   --color-primary-tint: rgba(204, 120, 92, 0.08);
 
   /* Theme-invariant tokens — the "product chrome" accent stays dark in both themes. */
@@ -172,6 +190,22 @@
   --color-rating-high-fg: #eafaf0;
   --color-rating-veryhigh: #3a9c62;
   --color-rating-veryhigh-fg: #eafaf0;
+
+  /* Estimate grades — same seven bands, darkened for the dark canvas. */
+  --color-grade-gw: #3a9c62;
+  --color-grade-gw-fg: #eafaf0;
+  --color-grade-w: #57a071;
+  --color-grade-w-fg: #eafaf0;
+  --color-grade-dplus: #3f5442;
+  --color-grade-dplus-fg: #dce9d8;
+  --color-grade-d: #4a473f;
+  --color-grade-d-fg: #e6e2d6;
+  --color-grade-dminus: #574636;
+  --color-grade-dminus-fg: #f0dfcc;
+  --color-grade-l: #cf9147;
+  --color-grade-l-fg: #241703;
+  --color-grade-gl: #c2544a;
+  --color-grade-gl-fg: #fdece9;
 
   --color-primary-tint: rgba(204, 120, 92, 0.18);
 }

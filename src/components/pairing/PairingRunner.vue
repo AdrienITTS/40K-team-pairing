@@ -301,7 +301,7 @@ const stepLabel = computed(() => {
 .option-grid {
   list-style: none;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
   gap: var(--spacing-xs);
 }
 
@@ -390,5 +390,42 @@ const stepLabel = computed(() => {
   background: var(--color-primary-disabled);
   color: var(--color-muted-soft);
   cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .runner {
+    gap: var(--spacing-sm);
+  }
+
+  .runner-head h2 {
+    font-size: 18px;
+  }
+
+  /* The logo tiles are the primary touch target of the whole flow, so on a
+     phone they take the width rather than staying at their desktop size. */
+  .option-grid {
+    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  }
+
+  .option-logo {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .option-logo img {
+    width: 70%;
+    height: 70%;
+  }
+
+  /* Confirming is the one action on the step; give it the full row. */
+  .actions {
+    gap: var(--spacing-sm);
+  }
+
+  .actions .btn-primary {
+    flex: 1;
+    padding-block: 12px;
+  }
 }
 </style>

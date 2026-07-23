@@ -16,6 +16,7 @@
  */
 
 import type { DispositionKey } from './dispositions'
+import type { EstimateTable } from './estimates'
 
 export type TeamSide = 'A' | 'B'
 
@@ -44,6 +45,15 @@ export interface PairingConfig {
   round: number
   teamA: TeamSetup
   teamB: TeamSetup
+  /**
+   * Which side filled in the matchup estimates — estimates are one team's prep
+   * work, so they are always read from that team's point of view. The setup
+   * wizard only offers Team A (the team running the tool); readers default to
+   * 'A' when it is absent.
+   */
+  estimateSide?: TeamSide
+  /** Optional pre-round matchup estimates, keyed `<our id>|<their id>`. */
+  estimates?: EstimateTable
 }
 
 export interface MatchupLayout {

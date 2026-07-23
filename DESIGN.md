@@ -356,6 +356,21 @@ Like the role badges, these are **small per-stance accent tokens**, not surfaces
 - **Disposition · Priority Assets** (`{colors.disposition-priority-assets}` — #a07810 light / #d0a53e dark): amber, navigation-arrow symbol.
 - Each has a matching `-tint` variant (0.14 light / 0.18 dark) used as the symbol-badge and chip background, with the solid color reserved for the glyph. Components reference these as `var(--color-disposition-<key>)` via an inline custom-property binding rather than hardcoding the hex.
 
+### Matchup Estimate Grades
+
+A **seven-band diverging scale** for the pre-round estimate grid, the pairing estimates rail, and the projected round result. Each band is one Battle Point range out of the 20 BP two players share, so the scale reads as an outcome, not a temperature: green = we take the BP, red = they do, and the three neutral shades in the middle are the draw band split into ahead / level / behind. Unlike the role and disposition tokens, these are **filled chips carrying text**, so every band ships a matching `-fg` foreground tuned for contrast on its own background.
+
+- **Grade · GW** (`{colors.grade-gw}` — #2f8f57 light / #3a9c62 dark): great victory, 17–20 BP.
+- **Grade · W** (`{colors.grade-w}` — #6bab7d light / #57a071 dark): victory, 13–16 BP.
+- **Grade · D+** (`{colors.grade-dplus}` — #c3d1bd light / #3f5442 dark): draw, ahead — 11–12 BP.
+- **Grade · D** (`{colors.grade-d}` — #d8d2c4 light / #4a473f dark): level draw, 10 BP. The neutral centre, and the same tone as `{colors.rating-even}`.
+- **Grade · D−** (`{colors.grade-dminus}` — #e2cdb4 light / #574636 dark): draw, behind — 8–9 BP.
+- **Grade · L** (`{colors.grade-l}` — #d68a3c light / #cf9147 dark): loss, 4–7 BP.
+- **Grade · GL** (`{colors.grade-gl}` — #b23b2f light / #c2544a dark): great loss, 0–3 BP.
+- Token names use the CSS-safe slug (`dplus` / `dminus`), which `gradeSlug()` in `data/estimates.ts` derives from the grade key. `GradeChip.vue` binds the pair as `--grade` / `--grade-fg` custom properties, so no component names a band directly.
+- The A/B/C layout-stance buttons in `EstimateGrid.vue` deliberately reuse `{colors.grade-w}` for "want this layout" and `{colors.grade-l}` for "avoid it" rather than adding tokens: a favoured layout is literally the one that puts that table on the victory column, and an avoided one puts it on the loss column, so the shared hue is the point.
+- The bands mirror around D: a grade and its mirror always sum to 20 BP, which is why the scale is symmetric in both hue and lightness.
+
 ### Surface
 
 - **Canvas** (`{colors.canvas}` — #faf9f5): The default page floor. Tinted cream — warm, deliberately not pure white.

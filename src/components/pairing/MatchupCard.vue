@@ -3,14 +3,33 @@ import { computed } from 'vue'
 import { moduleLabel, type LayoutLetter, type Matchup } from '../../data/pairing'
 import { factionName } from '../../data/factions'
 import { getDisposition, type Disposition, type DispositionKey } from '../../data/dispositions'
+import type { ProjectedTable } from '../../data/estimates'
 import DispositionIcon from '../DispositionIcon.vue'
+import GradeChip from './GradeChip.vue'
 
 const props = defineProps<{
   matchup: Matchup
   teamAName: string
   teamBName: string
   index: number
+  /** This table's projected estimate, when the round was set up with estimates. */
+  projection?: ProjectedTable
 }>()
+
+// How the projected grade was arrived at — the same reasoning the summary card
+// gives, surfaced here as the estimate's tooltip.
+const estimateTitle = computed(() => {
+  const p = props.projection
+  if (!p || !p.grade) return 'No estimate was recorded for this table'
+  switch (p.source) {
+    case 'layout':
+      return 'Scored on the column you rated for this layout'
+    case 'defender':
+      return "Scored from the Defender role — you didn't rate this layout"
+    default:
+      return "The round's fixed layout, and one you didn't rate — assumed to suit you"
+  }
+})
 
 interface ViewLayoutRequest {
   a: DispositionKey
@@ -75,7 +94,16 @@ function dispAccent(key: DispositionKey) {
   <article class="matchup">
     <header class="matchup-head">
       <span class="table-no">Table {{ index }}</span>
-      <span class="module-badge">{{ moduleLabel(matchup.module) }}</span>
+      <span class="head-meta">
+        <span class="module-badge">{{ moduleLabel(matchup.module) }}</span>
+        <span v-if="projection" class="estimate" :title="estimateTitle">
+          <template v-if="projection.grade">
+            <GradeChip :grade="projection.grade" />
+            <span class="est-bp">{{ projection.bp }} BP</span>
+          </template>
+          <span v-else class="est-none">No estimate</span>
+        </span>
+      </span>
     </header>
 
     <!-- Both players are full-width rows with an identical column grid (logo ·
@@ -99,9 +127,15 @@ function dispAccent(key: DispositionKey) {
         <span class="prow-role" :class="roleA ? `role-${roleA.toLowerCase()}` : ''">{{
           roleA
         }}</span>
-        <span class="prow-disp" :style="dispA ? dispAccent(dispA.key) : undefined">
+        <span
+          class="prow-disp"
+          :style="dispA ? dispAccent(dispA.key) : undefined"
+          :title="dispA?.name"
+        >
           <template v-if="dispA"
-            ><DispositionIcon :symbol="dispA.symbol" />{{ dispA.name }}</template
+            ><DispositionIcon :symbol="dispA.symbol" /><span class="disp-name">{{
+              dispA.name
+            }}</span></template
           >
         </span>
       </div>
@@ -123,9 +157,15 @@ function dispAccent(key: DispositionKey) {
         <span class="prow-role" :class="roleB ? `role-${roleB.toLowerCase()}` : ''">{{
           roleB
         }}</span>
-        <span class="prow-disp" :style="dispB ? dispAccent(dispB.key) : undefined">
+        <span
+          class="prow-disp"
+          :style="dispB ? dispAccent(dispB.key) : undefined"
+          :title="dispB?.name"
+        >
           <template v-if="dispB"
-            ><DispositionIcon :symbol="dispB.symbol" />{{ dispB.name }}</template
+            ><DispositionIcon :symbol="dispB.symbol" /><span class="disp-name">{{
+              dispB.name
+            }}</span></template
           >
         </span>
       </div>
@@ -163,6 +203,10 @@ function dispAccent(key: DispositionKey) {
 
 <style scoped>
 .matchup {
+  /* Queried below: how much a card can show depends on the grid track it landed
+     in, not on the viewport — the results grid runs anywhere from one column to
+     four at the same window width as the round grows. */
+  container-type: inline-size;
   background: var(--color-surface-card);
   border: 1px solid var(--color-hairline);
   border-radius: var(--radius-lg);
@@ -186,7 +230,7 @@ function dispAccent(key: DispositionKey) {
 
 .matchup-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--spacing-sm);
 }
@@ -197,10 +241,41 @@ function dispAccent(key: DispositionKey) {
   color: var(--color-ink);
 }
 
+.head-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  min-width: 0;
+}
+
 .module-badge {
   font-size: 12px;
   font-weight: 500;
   color: var(--color-muted);
+}
+
+/* The table's projected grade + BP, read from the same round projection the
+   summary card totals — the per-table detail now lives on its own card. */
+.estimate {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xxs);
+  flex-shrink: 0;
+}
+
+.est-bp {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.est-none {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-muted-soft);
 }
 
 /* Shared 4-track grid: the two player rows use `subgrid` so their logo / name /
@@ -398,6 +473,44 @@ function dispAccent(key: DispositionKey) {
 
   .prow-name {
     flex: 1;
+  }
+}
+
+/* The Disposition name costs more width than the army it sits beside, and its
+   symbol already carries the meaning (with the full name on the title), so once
+   the card is narrow — a phone, or a four-up results grid — only the glyph
+   stays and the faction name gets the room back. */
+@container (max-width: 400px) {
+  .disp-name {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .matchup {
+    padding: var(--spacing-sm);
+  }
+
+  .players {
+    column-gap: var(--spacing-xs);
+  }
+
+  .prow {
+    padding-right: var(--spacing-xs);
+  }
+
+  .matchup-foot {
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+  }
+
+  .layout-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .view-layout {
+    padding: 6px 0;
   }
 }
 </style>
