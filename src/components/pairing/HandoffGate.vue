@@ -19,17 +19,22 @@ defineProps<{
 </template>
 
 <style scoped>
+/* The banner sits inline with its slotted content (the step label, faction
+   tiles and confirm button), so the whole selection reads as one row. It wraps
+   on narrow screens. */
 .selecting {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-xs) var(--spacing-sm);
 }
 
 .selecting-head {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  padding: var(--spacing-xs) var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-sm);
   background: var(--color-surface-card);
   border: 1px solid var(--color-hairline);
   border-left: 3px solid transparent;

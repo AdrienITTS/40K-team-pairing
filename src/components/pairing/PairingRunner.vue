@@ -4,13 +4,12 @@ import HandoffGate from './HandoffGate.vue'
 import {
   currentActor,
   getPlayer,
-  moduleLabel,
   remainingPlayers,
   type PairingState,
   type Player,
   type TeamSide,
 } from '../../data/pairing'
-import { factionName } from '../../data/factions'
+import { factionAbbr, factionName } from '../../data/factions'
 
 const props = defineProps<{ state: PairingState }>()
 
@@ -23,17 +22,6 @@ const emit = defineEmits<{
 
 const phase = computed(() => props.state.phase)
 const actor = computed(() => currentActor(phase.value))
-const moduleKind = computed(() => props.state.moduleQueue[props.state.moduleIndex]!)
-
-// Which instance of this module we're on, e.g. "Initial Skirmish · 2 of 2".
-const moduleProgress = computed(() => {
-  const kinds = props.state.moduleQueue
-  const idx = props.state.moduleIndex
-  const total = kinds.filter((k) => k === kinds[idx]).length
-  if (total < 2) return moduleLabel(moduleKind.value)
-  const instance = kinds.slice(0, idx + 1).filter((k) => k === kinds[idx]).length
-  return `${moduleLabel(moduleKind.value)} · ${instance} of ${total}`
-})
 
 const phaseKey = computed(
   () => `${props.state.moduleIndex}-${phase.value.kind}-${actor.value ?? ''}`,
@@ -41,10 +29,6 @@ const phaseKey = computed(
 
 function teamName(side: TeamSide): string {
   return side === 'A' ? props.state.config.teamA.name : props.state.config.teamB.name
-}
-
-function opposing(side: TeamSide): TeamSide {
-  return side === 'A' ? 'B' : 'A'
 }
 
 // --- Selection state (reset whenever the phase changes) -----------------------
@@ -144,11 +128,6 @@ watch(
   { immediate: true },
 )
 
-// The current Defender for the counter-select instruction copy.
-function player(id: string | undefined): Player | null {
-  return id ? getPlayer(props.state, id) : null
-}
-
 const stepLabel = computed(() => {
   switch (phase.value.kind) {
     case 'defender-select':
@@ -165,63 +144,44 @@ const stepLabel = computed(() => {
 
 <template>
   <div class="runner">
-    <header class="runner-head">
-      <span class="module-progress">{{ moduleProgress }}</span>
-      <h2>{{ stepLabel }}</h2>
-    </header>
-
     <Transition name="phase" mode="out-in">
-      <!-- Selection phases, gated behind the device handoff -->
+      <!-- The whole selection is a single bar: who is selecting, what to do, the
+           faction choices, and the confirm — all on one row. -->
       <HandoffGate v-if="actor" :key="phaseKey" :team-side="actor" :team-name="teamName(actor)">
-        <div class="select-panel">
-          <p class="instruction">
-            <template v-if="phase.kind === 'defender-select'">
-              {{ teamName(actor) }} — pick the player to hold your table as Defender.
-            </template>
-            <template v-else-if="phase.kind === 'attackers-select'">
-              Pick <strong>two</strong> Attackers to send against {{ teamName(opposing(actor)) }}'s
-              Defender.
-            </template>
-            <template v-else-if="phase.kind === 'counter-select'">
-              Choose which of {{ teamName(opposing(actor)) }}'s two Attackers your Defender
-              <strong>{{ factionName(player(ownDefenderId)?.faction ?? null) }}</strong> will face.
-            </template>
-          </p>
+        <span class="step-label">{{ stepLabel }}</span>
 
-          <ul class="option-grid" :class="selectRole ? `sel-${selectRole}` : ''">
-            <li v-for="opt in options" :key="opt.id">
-              <button
-                type="button"
-                class="option"
-                :class="{ selected: isSelected(opt.id) }"
-                :aria-label="factionName(opt.faction)"
-                :title="factionName(opt.faction)"
-                @click="toggle(opt.id)"
-              >
-                <span class="option-logo">
-                  <img
-                    v-if="opt.faction"
-                    :src="`/images/factions/${opt.faction}.webp`"
-                    :alt="factionName(opt.faction)"
-                    width="44"
-                    height="44"
-                    loading="lazy"
-                  />
-                  <span v-else>·</span>
-                </span>
-                <span v-if="isSelected(opt.id)" class="check" aria-hidden="true">✓</span>
-              </button>
-            </li>
-          </ul>
-
-          <div class="actions">
-            <span v-if="selectMode === 'double'" class="hint">
-              {{ selected.length }} / 2 selected
-            </span>
-            <button type="button" class="btn-primary" :disabled="confirmDisabled" @click="confirm">
-              Lock in →
+        <ul class="option-grid" :class="selectRole ? `sel-${selectRole}` : ''">
+          <li v-for="opt in options" :key="opt.id">
+            <button
+              type="button"
+              class="option"
+              :class="{ selected: isSelected(opt.id) }"
+              :aria-label="factionName(opt.faction)"
+              :title="factionName(opt.faction)"
+              @click="toggle(opt.id)"
+            >
+              <span class="option-logo">
+                <img
+                  v-if="opt.faction"
+                  :src="`/images/factions/${opt.faction}.webp`"
+                  :alt="factionName(opt.faction)"
+                  width="44"
+                  height="44"
+                  loading="lazy"
+                />
+                <span v-else>·</span>
+              </span>
+              <span class="option-abbr">{{ factionAbbr(opt.faction) }}</span>
+              <span v-if="isSelected(opt.id)" class="check" aria-hidden="true">✓</span>
             </button>
-          </div>
+          </li>
+        </ul>
+
+        <div class="actions">
+          <span v-if="selectMode === 'double'" class="hint">{{ selected.length }} / 2</span>
+          <button type="button" class="btn-primary" :disabled="confirmDisabled" @click="confirm">
+            Lock in →
+          </button>
         </div>
       </HandoffGate>
     </Transition>
@@ -232,7 +192,6 @@ const stepLabel = computed(() => {
 .runner {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
 }
 
 /* Smooth the hand-off between selection and reveal phases: the outgoing phase
@@ -266,55 +225,48 @@ const stepLabel = computed(() => {
   }
 }
 
-.runner-head {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.module-progress {
-  font-size: 12px;
+/* The short action label ("Select two Attackers") that sits in the bar between
+   the "is selecting" banner and the faction tiles. */
+.step-label {
+  flex-shrink: 0;
+  font-size: 13px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-primary);
+  color: var(--color-ink);
+  white-space: nowrap;
 }
 
-.runner-head h2 {
-  font-size: 20px;
-  letter-spacing: -0.3px;
-}
-
-.select-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-sm);
-}
-
-.instruction {
-  font-size: 14px;
-  color: var(--color-body);
-}
-
-/* Logo-only selection tiles — the faction names are listed on the board to the
-   left, so the tiles just show a large, recognisable logo. */
+/* Logo-only selection tiles on a single row — the faction names are listed on
+   the board below, so the tiles just show a compact, recognisable logo. They
+   take the row's width beside the confirm button, capped so a small field
+   doesn't blow each tile up, and scroll sideways in the rare over-full case. */
 .option-grid {
+  flex: 1;
+  min-width: 0;
   list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
   gap: var(--spacing-xs);
+  overflow-x: auto;
+}
+
+.option-grid > li {
+  flex: 1 1 0;
+  min-width: 44px;
+  max-width: 96px;
 }
 
 .option {
   position: relative;
   width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-xs);
+  gap: 1px;
+  padding: 4px;
   background: var(--color-canvas);
   border: 1px solid var(--color-hairline);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   cursor: pointer;
 }
 
@@ -336,34 +288,48 @@ const stepLabel = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-sm);
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-xs);
   background: var(--color-surface-card);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--color-muted);
   flex-shrink: 0;
 }
 
 .option-logo img {
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
+}
+
+/* The faction's short tag under its logo — the icons are small on this bar, so
+   the letters are what actually tell two armies apart at a glance. */
+.option-abbr {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: var(--color-muted);
+}
+
+.option.selected .option-abbr {
+  color: var(--color-ink);
 }
 
 .check {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 2px;
+  right: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: var(--radius-pill);
   background: var(--color-surface-card);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
 }
 
@@ -378,12 +344,16 @@ const stepLabel = computed(() => {
 .actions {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
 }
 
 .hint {
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .btn-primary:disabled {
@@ -393,34 +363,18 @@ const stepLabel = computed(() => {
 }
 
 @media (max-width: 720px) {
-  .runner {
-    gap: var(--spacing-sm);
-  }
-
-  .runner-head h2 {
-    font-size: 18px;
-  }
-
-  /* The logo tiles are the primary touch target of the whole flow, so on a
-     phone they take the width rather than staying at their desktop size. */
+  /* The bar wraps (see HandoffGate); give the confirm button the full width on
+     its own line and let the tiles pack a touch tighter. */
   .option-grid {
-    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+    flex-basis: 100%;
   }
 
-  .option-logo {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1;
+  .option-grid > li {
+    min-width: 52px;
   }
 
-  .option-logo img {
-    width: 70%;
-    height: 70%;
-  }
-
-  /* Confirming is the one action on the step; give it the full row. */
   .actions {
-    gap: var(--spacing-sm);
+    flex: 1;
   }
 
   .actions .btn-primary {

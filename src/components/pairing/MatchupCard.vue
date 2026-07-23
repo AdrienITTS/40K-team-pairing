@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { moduleLabel, type LayoutLetter, type Matchup } from '../../data/pairing'
 import { factionName } from '../../data/factions'
 import { getDisposition, type Disposition, type DispositionKey } from '../../data/dispositions'
-import type { ProjectedTable } from '../../data/estimates'
+import type { LayoutStance, ProjectedTable } from '../../data/estimates'
 import DispositionIcon from '../DispositionIcon.vue'
 import GradeChip from './GradeChip.vue'
 
@@ -14,7 +14,25 @@ const props = defineProps<{
   index: number
   /** This table's projected estimate, when the round was set up with estimates. */
   projection?: ProjectedTable
+  /** Our recorded want/avoid stance per A/B/C layout, to tint the picker. */
+  layoutStances?: Partial<Record<LayoutLetter, LayoutStance>>
 }>()
+
+// Per-letter class for the layout picker: favour = a table we want, avoid = one
+// we don't, neutral = no impact (only shown once a preference exists, so a table
+// with none keeps plain buttons). `active` stays the declared letter, drawn as a
+// ring layered over whatever stance colour the button carries.
+function layoutBtnClass(letter: LayoutLetter) {
+  const stances = props.layoutStances
+  const stance = stances?.[letter]
+  const hasPrefs = Boolean(stances && Object.keys(stances).length > 0)
+  return {
+    active: props.matchup.layout.value === letter,
+    favour: stance === 'favour',
+    avoid: stance === 'avoid',
+    neutral: hasPrefs && !stance,
+  }
+}
 
 // How the projected grade was arrived at — the same reasoning the summary card
 // gives, surfaced here as the estimate's tooltip.
@@ -23,11 +41,11 @@ const estimateTitle = computed(() => {
   if (!p || !p.grade) return 'No estimate was recorded for this table'
   switch (p.source) {
     case 'layout':
-      return 'Scored on the column you rated for this layout'
+      return 'Scored from your layout preferences — a layout you avoided → lower, one you wanted → higher, a neutral one → the middle of the two'
     case 'defender':
-      return "Scored from the Defender role — you didn't rate this layout"
+      return "Scored from the Defender role — you set no layout preferences for this table"
     default:
-      return "The round's fixed layout, and one you didn't rate — assumed to suit you"
+      return "The round's fixed layout, and no preferences set — assumed neutral, the middle of your two estimates"
   }
 })
 
@@ -181,7 +199,7 @@ function dispAccent(key: DispositionKey) {
               :key="letter"
               type="button"
               class="layout-btn"
-              :class="{ active: matchup.layout.value === letter }"
+              :class="layoutBtnClass(letter)"
               @click="emit('layout', letter)"
             >
               {{ letter }}
@@ -433,10 +451,30 @@ function dispAccent(key: DispositionKey) {
   background: var(--color-surface-soft);
 }
 
+/* Layout-preference tints, matching the live board and the setup grid: a
+   favoured table borrows the win band, an avoided one the loss band, and a
+   recorded no-preference reads muted. */
+.layout-btn.favour {
+  background: var(--color-grade-w);
+  border-color: transparent;
+  color: var(--color-grade-w-fg);
+}
+
+.layout-btn.avoid {
+  background: var(--color-grade-l);
+  border-color: transparent;
+  color: var(--color-grade-l-fg);
+}
+
+.layout-btn.neutral {
+  color: var(--color-muted-soft);
+}
+
+/* The declared letter is a coral ring over whatever stance colour it carries,
+   so "which is chosen" and "how it rates" both read. */
 .layout-btn.active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-on-primary);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
 .layout-fixed {

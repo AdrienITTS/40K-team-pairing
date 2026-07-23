@@ -75,8 +75,13 @@ export function usePairingSession() {
     if (state.value) commit(proceed(state.value))
   }
 
+  // Declaring a table's layout is an incidental edit on an already-committed
+  // match-up, not a pairing "choice" — so it does NOT go on the undo stack.
+  // "Previous choice" then always steps back over the last faction selection,
+  // never over a layout click. (A layout is trivially re-editable in place by
+  // clicking a different letter, so it needs no undo of its own.)
   function layout(matchupId: string, value: LayoutLetter) {
-    if (state.value) commit(recordLayout(state.value, matchupId, value))
+    if (state.value) state.value = recordLayout(state.value, matchupId, value)
   }
 
   /** Whether there is an earlier choice to step back to. */

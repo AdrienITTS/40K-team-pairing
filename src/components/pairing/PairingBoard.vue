@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import {
   boardLayout,
   moduleLabel,
+  type BoardRow,
   type BoardSlot,
   type LayoutLetter,
   type Matchup,
@@ -11,6 +12,7 @@ import {
 } from '../../data/pairing'
 import { factionName } from '../../data/factions'
 import { getDisposition, type Disposition, type DispositionKey } from '../../data/dispositions'
+import { readEstimate, type LayoutStance } from '../../data/estimates'
 import DispositionIcon from '../DispositionIcon.vue'
 import RoleIcon from './RoleIcon.vue'
 
@@ -51,6 +53,34 @@ const layouts: LayoutLetter[] = ['A', 'B', 'C']
 function choose(matchup: Matchup | undefined, value: LayoutLetter) {
   if (matchup) emit('layout', matchup.id, value)
 }
+
+// The layout stances our team recorded for a match-up, used to tint its A/B/C
+// picker. Estimates are one team's own prep, keyed our-player|their-player, so
+// read them from whichever side owns them.
+const estimateSide = computed(() => props.state.config.estimateSide ?? 'A')
+
+function layoutStances(m: Matchup): Partial<Record<LayoutLetter, LayoutStance>> | undefined {
+  const ours = estimateSide.value === 'A' ? m.playerA : m.playerB
+  const theirs = estimateSide.value === 'A' ? m.playerB : m.playerA
+  return readEstimate(props.state.config.estimates, ours.id, theirs.id).layouts
+}
+
+// Per-letter class for the picker: favour = a table we want, avoid = one we
+// don't, neutral = no impact (only once a preference is recorded for the table,
+// so a match-up with none keeps the plain buttons). `active` stays the declared
+// letter, shown as a ring on top of whatever stance colour it carries.
+function layoutBtnClass(m: Matchup | undefined, letter: LayoutLetter) {
+  if (!m) return {}
+  const stances = layoutStances(m)
+  const stance = stances?.[letter]
+  const hasPrefs = Boolean(stances && Object.keys(stances).length > 0)
+  return {
+    active: m.layout.value === letter,
+    favour: stance === 'favour',
+    avoid: stance === 'avoid',
+    neutral: hasPrefs && !stance,
+  }
+}
 const currentModule = computed(() => moduleLabel(props.state.moduleQueue[props.state.moduleIndex]!))
 
 const roleLabels: Record<PlayerRole, string> = {
@@ -65,6 +95,18 @@ const legend: PlayerRole[] = ['defender', 'attacker', 'refused', 'champion']
 function cellClass(slot: BoardSlot | null): string {
   if (!slot) return 'pending'
   return slot.role ? `role-${slot.role}` : 'role-none'
+}
+
+// One side of a row is normally a single cell (a player, or a pending seat), but
+// while a Defender's opponent is being counter-picked it becomes the two Attacker
+// candidates — so each side renders as a short list of cells.
+function sideItems(
+  row: BoardRow,
+  side: 'a' | 'b',
+): { slot: BoardSlot | null; candidate: boolean }[] {
+  const candidates = side === 'a' ? row.aCandidates : row.bCandidates
+  if (candidates?.length) return candidates.map((slot) => ({ slot, candidate: true }))
+  return [{ slot: side === 'a' ? row.a : row.b, candidate: false }]
 }
 
 // A player's Force Disposition (or null), shown as a tinted badge on their cell.
@@ -110,60 +152,76 @@ function dispAccent(key: DispositionKey) {
         :class="{ committed: row.committed }"
       >
         <div class="matchup-line">
-          <div class="cell" :class="cellClass(row.a)">
-            <template v-if="row.a">
-              <div class="logo-tile">
-                <img
-                  v-if="row.a.player.faction"
-                  :src="`/images/factions/${row.a.player.faction}.webp`"
-                  :alt="row.a.player.faction"
-                  width="28"
-                  height="28"
-                  loading="lazy"
-                />
-                <span v-else class="logo-fallback">·</span>
-              </div>
-              <span class="cell-name">{{ factionName(row.a.player.faction) }}</span>
-              <span
-                v-if="disp(row.a)"
-                class="disp-badge"
-                :style="dispAccent(disp(row.a)!.key)"
-                :title="disp(row.a)!.name"
-              >
-                <DispositionIcon :symbol="disp(row.a)!.symbol" />
-              </span>
-              <RoleIcon v-if="row.a.role" :role="row.a.role" />
-            </template>
-            <span v-else class="pending-text">pending</span>
+          <div class="side">
+            <div
+              v-for="(item, k) in sideItems(row, 'a')"
+              :key="k"
+              class="cell"
+              :class="[cellClass(item.slot), { candidate: item.candidate }]"
+              :title="item.candidate ? 'Possible opponent' : undefined"
+            >
+              <template v-if="item.slot">
+                <div class="logo-tile">
+                  <img
+                    v-if="item.slot.player.faction"
+                    :src="`/images/factions/${item.slot.player.faction}.webp`"
+                    :alt="item.slot.player.faction"
+                    width="28"
+                    height="28"
+                    loading="lazy"
+                  />
+                  <span v-else class="logo-fallback">·</span>
+                </div>
+                <span class="cell-name">{{ factionName(item.slot.player.faction) }}</span>
+                <span
+                  v-if="disp(item.slot)"
+                  class="disp-badge"
+                  :style="dispAccent(disp(item.slot)!.key)"
+                  :title="disp(item.slot)!.name"
+                >
+                  <DispositionIcon :symbol="disp(item.slot)!.symbol" />
+                </span>
+                <RoleIcon v-if="item.slot.role" :role="item.slot.role" />
+              </template>
+              <span v-else class="pending-text">pending</span>
+            </div>
           </div>
 
           <span class="vs">vs</span>
 
-          <div class="cell" :class="cellClass(row.b)">
-            <template v-if="row.b">
-              <div class="logo-tile">
-                <img
-                  v-if="row.b.player.faction"
-                  :src="`/images/factions/${row.b.player.faction}.webp`"
-                  :alt="row.b.player.faction"
-                  width="28"
-                  height="28"
-                  loading="lazy"
-                />
-                <span v-else class="logo-fallback">·</span>
-              </div>
-              <span class="cell-name">{{ factionName(row.b.player.faction) }}</span>
-              <span
-                v-if="disp(row.b)"
-                class="disp-badge"
-                :style="dispAccent(disp(row.b)!.key)"
-                :title="disp(row.b)!.name"
-              >
-                <DispositionIcon :symbol="disp(row.b)!.symbol" />
-              </span>
-              <RoleIcon v-if="row.b.role" :role="row.b.role" />
-            </template>
-            <span v-else class="pending-text">pending</span>
+          <div class="side">
+            <div
+              v-for="(item, k) in sideItems(row, 'b')"
+              :key="k"
+              class="cell"
+              :class="[cellClass(item.slot), { candidate: item.candidate }]"
+              :title="item.candidate ? 'Possible opponent' : undefined"
+            >
+              <template v-if="item.slot">
+                <div class="logo-tile">
+                  <img
+                    v-if="item.slot.player.faction"
+                    :src="`/images/factions/${item.slot.player.faction}.webp`"
+                    :alt="item.slot.player.faction"
+                    width="28"
+                    height="28"
+                    loading="lazy"
+                  />
+                  <span v-else class="logo-fallback">·</span>
+                </div>
+                <span class="cell-name">{{ factionName(item.slot.player.faction) }}</span>
+                <span
+                  v-if="disp(item.slot)"
+                  class="disp-badge"
+                  :style="dispAccent(disp(item.slot)!.key)"
+                  :title="disp(item.slot)!.name"
+                >
+                  <DispositionIcon :symbol="disp(item.slot)!.symbol" />
+                </span>
+                <RoleIcon v-if="item.slot.role" :role="item.slot.role" />
+              </template>
+              <span v-else class="pending-text">pending</span>
+            </div>
           </div>
         </div>
 
@@ -181,7 +239,7 @@ function dispAccent(key: DispositionKey) {
                   :key="letter"
                   type="button"
                   class="layout-btn"
-                  :class="{ active: row.matchup?.layout.value === letter }"
+                  :class="layoutBtnClass(row.matchup, letter)"
                   @click="choose(row.matchup, letter)"
                 >
                   {{ letter }}
@@ -335,13 +393,13 @@ function dispAccent(key: DispositionKey) {
   gap: var(--spacing-xs);
 }
 
-/* The match-up line spans the full board width; its table choice (when the row
-   is committed) stacks beneath it, right-aligned, so the cells always reach the
-   right edge and line up with the waiting pool. */
+/* The match-up and its table choice sit on one row: the cells give up whatever
+   width the layout picker needs rather than pushing it onto a second line — a
+   whole 8-player board then costs eight rows, not sixteen. */
 .row {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-xxs);
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .matchup-line {
@@ -362,6 +420,7 @@ function dispAccent(key: DispositionKey) {
   align-items: center;
   justify-content: flex-end;
   gap: var(--spacing-xs);
+  flex-shrink: 0;
 }
 
 /* Pending rows (and committed rows without a table choice) render an empty
@@ -399,10 +458,30 @@ function dispAccent(key: DispositionKey) {
   background: var(--color-surface-soft);
 }
 
+/* Layout-preference tints, borrowing the same W/L grade bands the setup grid
+   uses: a favoured table is the one that scores us the victory column, an
+   avoided one the loss column, and neutral is a recorded no-preference. */
+.layout-btn.favour {
+  background: var(--color-grade-w);
+  border-color: transparent;
+  color: var(--color-grade-w-fg);
+}
+
+.layout-btn.avoid {
+  background: var(--color-grade-l);
+  border-color: transparent;
+  color: var(--color-grade-l-fg);
+}
+
+.layout-btn.neutral {
+  color: var(--color-muted-soft);
+}
+
+/* The declared letter is a coral ring layered over whatever stance colour the
+   button already carries, so "which is chosen" and "how it rates" both read. */
 .layout-btn.active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: var(--color-on-primary);
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
 .layout-fixed {
@@ -448,6 +527,15 @@ function dispAccent(key: DispositionKey) {
   text-transform: uppercase;
 }
 
+/* One grid column per side; normally one cell, but two stacked candidate cells
+   while a Defender's opponent is being counter-picked. */
+.side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xxs);
+}
+
 .cell {
   display: flex;
   align-items: center;
@@ -463,6 +551,13 @@ function dispAccent(key: DispositionKey) {
   border-color: var(--color-hairline);
   background: var(--color-canvas);
   color: var(--color-muted-soft);
+}
+
+/* A proposed Attacker facing a Defender — one of two possibilities until the
+   counter-pick settles it. The dotted border marks it as not-yet-final. */
+.cell.candidate {
+  border-style: dotted;
+  border-width: 2px;
 }
 
 .pending-text {
@@ -687,8 +782,12 @@ function dispAccent(key: DispositionKey) {
     white-space: nowrap;
   }
 
-  /* Separate the stacked rows with a hairline on narrow screens. */
+  /* On a phone the cells go single-column, so the table choice stacks under the
+     match-up again and a hairline separates the rows. */
   .row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacing-xxs);
     padding-bottom: var(--spacing-xs);
     border-bottom: 1px solid var(--color-hairline-soft);
   }

@@ -9,8 +9,13 @@ import EstimateDrawer from '../components/pairing/EstimateDrawer.vue'
 import RoundProjection from '../components/pairing/RoundProjection.vue'
 import { usePairingSession } from '../composables/usePairingSession'
 import { layoutForRound, type LayoutLetter } from '../data/pairing'
-import { estimateCount, projectRound, type ProjectedTable } from '../data/estimates'
-import { serializePairingConfig } from '../data/pairingText'
+import {
+  estimateCount,
+  projectRound,
+  readEstimate,
+  type LayoutStance,
+  type ProjectedTable,
+} from '../data/estimates'
 import type { DispositionKey } from '../data/dispositions'
 
 const session = usePairingSession()
@@ -27,9 +32,10 @@ const layoutRequest = ref<{
 // a picker, and the intro copy steps aside so the picker gets full focus.
 const setupStep = ref<SetupStep>('mode')
 
-// The estimates rail is opt-in: it holds one team's private prep work, and the
-// device is passed between captains, so it stays shut until asked for.
-const estimatesOpen = ref(false)
+// The estimates card sits in the live layout's right column. It shows by default
+// so the whole round reads on one page; the toggle hides it when the device is
+// handed to the opposing captain (it holds one team's private prep).
+const estimatesOpen = ref(true)
 
 const state = computed(() => session.state.value)
 // Top-level ref so the template auto-unwraps it for the "Previous choice" link.
@@ -53,15 +59,33 @@ const projectionByMatchup = computed<Record<string, ProjectedTable>>(() => {
   return Object.fromEntries(tables.map((t) => [t.matchup.id, t]))
 })
 
+// Our recorded want/avoid layout stance per match-up, keyed by id, so each
+// MatchupCard can tint its A/B/C picker the same way the live board does.
+const layoutStancesByMatchup = computed<
+  Record<string, Partial<Record<LayoutLetter, LayoutStance>>>
+>(() => {
+  const s = state.value
+  if (!s || !hasEstimates.value) return {}
+  const side = s.config.estimateSide ?? 'A'
+  const out: Record<string, Partial<Record<LayoutLetter, LayoutStance>>> = {}
+  for (const m of s.matchups) {
+    const ours = side === 'A' ? m.playerA : m.playerB
+    const theirs = side === 'A' ? m.playerB : m.playerA
+    const layouts = readEstimate(s.config.estimates, ours.id, theirs.id).layouts
+    if (layouts) out[m.id] = layouts
+  }
+  return out
+})
+
 // PairingSetup unmounts once a round starts; when it reappears (e.g. after
 // "Change rosters") send the wizard back to step 1 so it doesn't resume mid-flow.
 watch(state, (s) => {
   if (!s) setupStep.value = 'mode'
 })
 
-// A fresh pairing starts with the estimates rail shut again.
+// A fresh pairing starts with the estimates card shown again.
 function resetEstimateUi() {
-  estimatesOpen.value = false
+  estimatesOpen.value = true
 }
 
 function startRound(config: Parameters<typeof session.start>[0]) {
@@ -82,32 +106,14 @@ const isComplete = computed(() => state.value?.phase.kind === 'complete')
 const teamSize = computed(() => state.value?.config.teamA.players.length ?? 0)
 const decided = computed(() => state.value?.matchups.length ?? 0)
 
-// The rail only exists while the round is running (see the EstimateDrawer's own
-// `v-if`), so the page gutter it reserves has to be gated on exactly the same
-// condition — otherwise a rail left open when the last table resolves keeps its
-// 440px reserved on the results page, with nothing in it, and the whole page
-// reads as shifted left of centre.
-const railOpen = computed(
+// The estimates card only belongs to the live step: a round set up with
+// estimates, still running, with the toggle on.
+const showEstimates = computed(
   () => estimatesOpen.value && Boolean(state.value) && !isComplete.value && hasEstimates.value,
 )
 
 function onLayout(matchupId: string, value: LayoutLetter) {
   session.layout(matchupId, value)
-}
-
-// The other half of Quick pairing: a round set up here can be copied back out as
-// the same text the paste step reads, so next week's round starts from this one.
-const copyState = ref<'idle' | 'copied' | 'failed'>('idle')
-
-async function copySetup() {
-  if (!state.value) return
-  try {
-    await navigator.clipboard.writeText(serializePairingConfig(state.value.config))
-    copyState.value = 'copied'
-  } catch {
-    copyState.value = 'failed'
-  }
-  setTimeout(() => (copyState.value = 'idle'), 2400)
 }
 </script>
 
@@ -115,9 +121,7 @@ async function copySetup() {
   <main
     class="pairing"
     :class="{
-      'rail-open': railOpen,
       running: Boolean(state),
-      'viewport-locked': state && !isComplete,
     }"
   >
     <section class="hero">
@@ -160,9 +164,8 @@ async function copySetup() {
         </div>
 
         <div class="live">
-          <PairingBoard :state="state" @layout="onLayout" @view-layout="layoutRequest = $event" />
-
-          <section class="panel">
+          <!-- The active selection card leads, full width, faction choices on one row. -->
+          <section class="panel selection-panel">
             <PairingRunner
               :state="state"
               @defender="session.defender"
@@ -171,6 +174,12 @@ async function copySetup() {
               @next="session.next"
             />
           </section>
+
+          <!-- Below it, the live board (what's happening) beside the estimates. -->
+          <div class="live-columns" :class="{ 'with-estimates': showEstimates }">
+            <PairingBoard :state="state" @layout="onLayout" @view-layout="layoutRequest = $event" />
+            <EstimateDrawer v-if="showEstimates" :state="state" @close="estimatesOpen = false" />
+          </div>
         </div>
       </template>
 
@@ -187,20 +196,6 @@ async function copySetup() {
             </p>
           </div>
           <div class="results-actions">
-            <button
-              type="button"
-              class="btn-secondary"
-              title="Copy this round's setup as text you can paste back into Quick pairing"
-              @click="copySetup"
-            >
-              {{
-                copyState === 'copied'
-                  ? 'Copied ✓'
-                  : copyState === 'failed'
-                    ? 'Copy failed'
-                    : 'Copy setup'
-              }}
-            </button>
             <button type="button" class="btn-secondary" @click="changeRosters">
               Change rosters
             </button>
@@ -219,6 +214,7 @@ async function copySetup() {
             :team-a-name="state.config.teamA.name"
             :team-b-name="state.config.teamB.name"
             :projection="projectionByMatchup[m.id]"
+            :layout-stances="layoutStancesByMatchup[m.id]"
             @layout="(value) => onLayout(m.id, value)"
             @view-layout="layoutRequest = $event"
           />
@@ -232,21 +228,12 @@ async function copySetup() {
       </template>
     </div>
 
-    <EstimateDrawer
-      v-if="state && !isComplete && hasEstimates"
-      :state="state"
-      :open="railOpen"
-      @close="estimatesOpen = false"
-    />
-
     <LayoutLightbox :request="layoutRequest" @close="layoutRequest = null" />
   </main>
 </template>
 
 <style scoped>
 .pairing {
-  /* Shared with EstimateDrawer, which pins itself to this width on the right. */
-  --rail-width: 440px;
   padding: var(--spacing-lg) var(--spacing-md) var(--spacing-xl);
   /* Wider than the site's 1200px `.container`: this is the one page whose job is
      to hold a whole round — up to eight tables — in view at once, so it takes
@@ -258,49 +245,6 @@ async function copySetup() {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  transition: padding-right 0.22s ease;
-}
-
-/* Only the live step is bound to the viewport: there the board and the
-   selection card have to stay on screen together, so the hero is pinned and the
-   body scrolls inside itself. Setup and results are ordinary documents — they
-   run as long as they need to and the page scrolls, which is also what keeps
-   the results column reading as a centred page rather than a short pane with
-   dead space under it. Below the breakpoint nothing is pinned: a nested
-   scroller inside a phone viewport buries the controls. */
-@media (min-width: 1025px) {
-  .pairing.viewport-locked {
-    height: calc(100dvh - 65px);
-    min-height: 0;
-    padding-bottom: 0;
-  }
-
-  .pairing.viewport-locked .hero {
-    flex-shrink: 0;
-  }
-
-  .pairing.viewport-locked .pairing-body {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
-    padding-bottom: var(--spacing-lg);
-  }
-}
-
-/* Give the open rail its width back out of the page rather than letting it sit
-   on top of the selection card — the captain has to keep picking while reading
-   the estimates. Below the breakpoint there isn't the room, and the rail goes
-   full-screen instead (see EstimateDrawer). */
-@media (min-width: 1101px) {
-  .pairing.rail-open {
-    padding-right: var(--rail-width);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pairing {
-    transition: none;
-  }
 }
 
 .hero {
@@ -341,40 +285,47 @@ async function copySetup() {
   min-width: 0;
 }
 
-/* Live step: the pairing board and the active selection card sit side by side
-   on one line rather than stacked, so both stay on screen together. The board
-   takes all the room it can; the selection card is pinned narrow so its logo
-   grid wraps onto several short rows (filling the otherwise-dead space beneath
-   it) instead of forcing a wide, half-empty column. That extra width lets the
-   board float each table choice inline with its match-up. */
+/* Live step, top to bottom: the active selection card full width, then the live
+   board beside the estimates. Everything is in normal document flow — one
+   scrolling page rather than a fixed overlay. */
 .live {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  display: flex;
+  flex-direction: column;
   gap: var(--spacing-md);
-  align-items: start;
 }
 
-/* Grid items default to min-width:auto, which lets their content overflow the
-   narrow fr tracks (a horizontal-scroll break around ~900–1000px). Pin to 0. */
 .live > * {
   min-width: 0;
 }
 
-.live .panel {
+.selection-panel {
   margin-top: 0;
+  /* The selection bar is deliberately short — trim the card padding so it reads
+     as a compact control strip above the board, not a tall panel. */
+  padding: var(--spacing-sm) var(--spacing-md);
 }
 
-/* Only split into two columns when there is genuinely room; below this the
-   board and card stack, which is the layout that fits mid-size viewports.
-   Stacked, the selection card goes first: it is the thing the captain acts on,
-   and the board is reference they can scroll down to. */
-@media (max-width: 1024px) {
-  .live {
-    grid-template-columns: 1fr;
-  }
+/* Board (left) beside estimates (right). With no estimates the board takes the
+   whole width; the second track only appears once the estimates card is shown. */
+.live-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--spacing-md);
+  align-items: start;
+}
 
-  .live .panel {
-    order: -1;
+.live-columns.with-estimates {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+}
+
+.live-columns > * {
+  min-width: 0;
+}
+
+/* Below this there isn't room for two columns, so the board and estimates stack. */
+@media (max-width: 1024px) {
+  .live-columns.with-estimates {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -278,6 +278,14 @@ export interface BoardRow {
   committed: boolean
   /** The committed match-up this row came from (absent on forming draft rows). */
   matchup?: Matchup
+  /**
+   * While a Defender's opponent is still being counter-picked, the two revealed
+   * Attackers that could take the empty seat — shown facing the Defender as
+   * possibilities rather than sitting loose in the waiting pool. Set on whichever
+   * side (a/b) is not yet resolved; the opposite side holds the Defender.
+   */
+  aCandidates?: BoardSlot[]
+  bCandidates?: BoardSlot[]
 }
 
 export interface BoardLayout {
@@ -308,20 +316,32 @@ export function boardLayout(state: PairingState): BoardLayout {
   const { draft } = state
   if (draft.defenderA || draft.defenderB) {
     if (draft.defenderA && !placed.has(draft.defenderA)) {
-      rows.push({
+      // Defender A faces one of Team B's revealed Attackers; until that counter
+      // is picked, show both as candidates facing the Defender.
+      const row: BoardRow = {
         a: slot(draft.defenderA),
         b: draft.counterA ? slot(draft.counterA) : null,
         committed: false,
-      })
+      }
+      if (!draft.counterA && draft.attackersB) {
+        row.bCandidates = draft.attackersB.map(slot)
+        for (const id of draft.attackersB) placed.add(id)
+      }
+      rows.push(row)
       placed.add(draft.defenderA)
       if (draft.counterA) placed.add(draft.counterA)
     }
     if (draft.defenderB && !placed.has(draft.defenderB)) {
-      rows.push({
+      const row: BoardRow = {
         a: draft.counterB ? slot(draft.counterB) : null,
         b: slot(draft.defenderB),
         committed: false,
-      })
+      }
+      if (!draft.counterB && draft.attackersA) {
+        row.aCandidates = draft.attackersA.map(slot)
+        for (const id of draft.attackersA) placed.add(id)
+      }
+      rows.push(row)
       placed.add(draft.defenderB)
       if (draft.counterB) placed.add(draft.counterB)
     }

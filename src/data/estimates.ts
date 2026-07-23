@@ -30,6 +30,13 @@ export type EstimateGrade = 'GW' | 'W' | 'D+' | 'D' | 'D-' | 'L' | 'GL'
 /** Which of a matchup's two estimates applies — a table that suits us, or not. */
 export type TableQuality = 'good' | 'bad'
 
+/**
+ * The column a table's layout resolves to. `good`/`bad` read the two estimates
+ * directly; `neutral` — a layout we neither want nor avoid — sits halfway
+ * between them (see `columnBp`).
+ */
+export type TableColumn = 'good' | 'bad' | 'neutral'
+
 export interface EstimateGradeInfo {
   key: EstimateGrade
   /** Full name for tooltips and the legend. */
@@ -64,6 +71,13 @@ export function gradeInfo(grade: EstimateGrade): EstimateGradeInfo {
 /** BP the grade is worth for us; the opponent takes the remaining `20 - bp`. */
 export function gradeBp(grade: EstimateGrade): number {
   return gradeInfo(grade).bp
+}
+
+/** The grade whose BP band contains `bp` — the bands tile 0–20 with no gaps. */
+export function gradeForBp(bp: number): EstimateGrade {
+  const clamped = Math.max(0, Math.min(20, bp))
+  const info = estimateGrades.find((g) => clamped >= g.band[0] && clamped <= g.band[1])
+  return (info ?? gradeByKey.get('D')!).key
 }
 
 const GRADE_SLUGS: Readonly<Record<EstimateGrade, string>> = {
@@ -206,7 +220,8 @@ export function verdictTeamPoints(verdict: RoundVerdict): number {
  *  - `layout`    the table's layout letter is known and we rated it in setup;
  *  - `defender`  nobody rated the letter, but one side declares it, and that
  *                side gets the table it wants;
- *  - `default`   neither applies (a roll-off on an unrated letter) — assumed good.
+ *  - `default`   neither applies (a roll-off on an unrated letter) — assumed
+ *                neutral, the midpoint of the two estimates.
  */
 export type QualitySource = 'override' | 'layout' | 'defender' | 'default'
 
@@ -214,16 +229,40 @@ export interface ProjectedTable {
   matchup: Matchup
   ourPlayerId: string
   oppPlayerId: string
-  /** The quality the match-up implies on its own, before any override. */
-  implied: TableQuality | null
-  /** The quality actually used. */
-  quality: TableQuality
+  /** The column the match-up implies on its own, before any override. */
+  implied: TableColumn | null
+  /** The column actually used. */
+  quality: TableColumn
   source: QualitySource
   /** The layout letter in play, once it is known. */
   letter: LayoutLetter | null
+  /** The grade shown — the rated one for good/bad, the midpoint band for neutral. */
   grade: EstimateGrade | null
   /** Our BP from this table, or null if the estimate is blank. */
   bp: number | null
+}
+
+/**
+ * Our BP from a table read on a given column. `good`/`bad` are the rated grades;
+ * `neutral` is the midpoint of the two (rounded), so a layout we neither want
+ * nor avoid lands halfway between the two outcomes. Null when the column has no
+ * grade to read (neutral needs both; good/bad need their own).
+ */
+export function columnBp(cell: EstimateCell, column: TableColumn): number | null {
+  if (column === 'good') return cell.good ? gradeBp(cell.good) : null
+  if (column === 'bad') return cell.bad ? gradeBp(cell.bad) : null
+  if (cell.good && cell.bad) return Math.round((gradeBp(cell.good) + gradeBp(cell.bad)) / 2)
+  const only = cell.good ?? cell.bad
+  return only ? gradeBp(only) : null
+}
+
+/** The grade to show for a column — the rated grade, or the band the neutral
+ *  midpoint lands in. */
+export function columnGrade(cell: EstimateCell, column: TableColumn): EstimateGrade | null {
+  if (column === 'good') return cell.good
+  if (column === 'bad') return cell.bad
+  const bp = columnBp(cell, 'neutral')
+  return bp === null ? null : gradeForBp(bp)
 }
 
 export interface RoundProjection {
@@ -244,24 +283,27 @@ export interface RoundProjection {
 /**
  * Which estimate column a match-up reads from, and why.
  *
- * The layout stances recorded in setup are the real answer, so they win: once
- * the table's letter is known (declared by its Defender, or fixed by the round
- * on a roll-off table) a letter we marked `favour` makes it a good table and one
- * we marked `avoid` a bad one — regardless of who picked it. Only when the
- * letter is unknown or unrated do we fall back to the Defender role, on the
- * assumption that whoever declares the layout declares one they like.
+ * Once we've declared any layout preferences for a table, the layout actually in
+ * play decides the column outright: a letter we marked `avoid` scores the bad
+ * column, a `favour` letter the good column, and a neutral one we never flagged
+ * the `neutral` column — the midpoint of the two (see `columnBp`). Only when we
+ * recorded no preferences for the table do we fall back to the Defender role, on
+ * the assumption whoever declares the layout likes it.
  */
 export function impliedQuality(
   matchup: Matchup,
   ourSide: TeamSide,
   table?: EstimateTable,
-): { quality: TableQuality | null; source: Exclude<QualitySource, 'override' | 'default'> | null } {
+): { quality: TableColumn | null; source: Exclude<QualitySource, 'override' | 'default'> | null } {
   const letter = matchup.layout.value
-  if (letter) {
-    const ourPlayerId = ourSide === 'A' ? matchup.playerA.id : matchup.playerB.id
-    const oppPlayerId = ourSide === 'A' ? matchup.playerB.id : matchup.playerA.id
-    const stance = readEstimate(table, ourPlayerId, oppPlayerId).layouts?.[letter]
-    if (stance) return { quality: stance === 'favour' ? 'good' : 'bad', source: 'layout' }
+  const ourPlayerId = ourSide === 'A' ? matchup.playerA.id : matchup.playerB.id
+  const oppPlayerId = ourSide === 'A' ? matchup.playerB.id : matchup.playerA.id
+  const layouts = readEstimate(table, ourPlayerId, oppPlayerId).layouts
+
+  if (letter && layouts && Object.keys(layouts).length > 0) {
+    const stance = layouts[letter]
+    const quality: TableColumn = stance === 'avoid' ? 'bad' : stance === 'favour' ? 'good' : 'neutral'
+    return { quality, source: 'layout' }
   }
   if (matchup.defenderSide) {
     return { quality: matchup.defenderSide === ourSide ? 'good' : 'bad', source: 'defender' }
@@ -285,11 +327,11 @@ export function projectRound(
   const tables: ProjectedTable[] = matchups.map((m) => {
     const ourPlayerId = ourSide === 'A' ? m.playerA.id : m.playerB.id
     const oppPlayerId = ourSide === 'A' ? m.playerB.id : m.playerA.id
+    const cell = readEstimate(table, ourPlayerId, oppPlayerId)
     const implied = impliedQuality(m, ourSide, table)
     const override = overrides[m.id]
-    const quality = override ?? implied.quality ?? 'good'
+    const quality: TableColumn = override ?? implied.quality ?? 'neutral'
     const source: QualitySource = override ? 'override' : (implied.source ?? 'default')
-    const grade = readEstimate(table, ourPlayerId, oppPlayerId)[quality]
     return {
       matchup: m,
       ourPlayerId,
@@ -298,8 +340,8 @@ export function projectRound(
       quality,
       source,
       letter: m.layout.value,
-      grade,
-      bp: grade ? gradeBp(grade) : null,
+      grade: columnGrade(cell, quality),
+      bp: columnBp(cell, quality),
     }
   })
 

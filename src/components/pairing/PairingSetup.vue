@@ -16,7 +16,7 @@ import {
   type TeamSide,
 } from '../../data/pairing'
 import { estimateCount, layoutStanceCount, type EstimateTable } from '../../data/estimates'
-import { EXAMPLE_SETUP, parsePairingConfig } from '../../data/pairingText'
+import { parsePairingConfig } from '../../data/pairingText'
 
 const emit = defineEmits<{ start: [config: PairingConfig] }>()
 
@@ -342,6 +342,18 @@ function clearEstimates() {
 
 const pasteText = ref('')
 
+// A short prompt rather than a full worked example — the example now ships as a
+// downloadable file, so the box stays uncluttered.
+const PASTE_PLACEHOLDER = `Paste the whole block copied from your “W40k – Estimation” sheet here…
+
+…or type the line-by-line format (see Format below).`
+
+// Ready-to-fill spreadsheets shipped under public/examples, one per team size.
+// The captain picks their size and downloads the matching, fully-filled sheet.
+const EXAMPLE_SIZES = [3, 4, 5, 6, 7, 8] as const
+const exampleSize = ref<number>(5)
+const exampleFile = computed(() => `/examples/W40k-Estimation-Template-${exampleSize.value}p.xlsx`)
+
 // Re-read on every keystroke: the report below the box is the only feedback the
 // user gets on a format they are typing blind, so it has to track what they type.
 const parsed = computed(() => parsePairingConfig(pasteText.value))
@@ -653,15 +665,24 @@ function submit() {
       <section v-else-if="step === 'paste'" key="step-paste" class="step">
         <div class="picker-head">
           <h2 class="picker-title">Paste a setup</h2>
-          <span class="picker-count">
-            <button type="button" class="text-link" @click="pasteText = EXAMPLE_SETUP">
-              Load an example
-            </button>
+          <span class="download-example">
+            <label class="download-label" for="example-size">Example for</label>
+            <select id="example-size" v-model.number="exampleSize" class="download-size">
+              <option v-for="n in EXAMPLE_SIZES" :key="n" :value="n">{{ n }} players</option>
+            </select>
+            <a class="download-link" :href="exampleFile" download>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+              </svg>
+              Download
+            </a>
           </span>
         </div>
         <p class="picker-rule">
-          One directive per line. Everything is optional except the two rosters — and you can copy
-          this text straight back out of a finished round to replay it later.
+          Copy the whole block from your “W40k – Estimation” sheet (the Template V11 tab) and paste
+          it straight in — rosters, Dispositions, grades and layout preferences are all read from
+          it. No sheet yet? Download a ready-to-fill one above. The line-by-line directive format
+          below still works too.
         </p>
 
         <textarea
@@ -670,7 +691,7 @@ function submit() {
           rows="14"
           spellcheck="false"
           aria-label="Pasted setup"
-          :placeholder="EXAMPLE_SETUP"
+          :placeholder="PASTE_PLACEHOLDER"
         ></textarea>
 
         <ul v-if="pasteText.trim() && parsed.errors.length" class="paste-errors">
@@ -686,6 +707,16 @@ function submit() {
 
         <details class="paste-format">
           <summary>Format</summary>
+          <p class="format-note">
+            <strong>From the sheet:</strong> select the whole Template V11 table, copy, and paste
+            here — your team name and round come from the top, the opponents’ armies and
+            Dispositions from the header row, the grade table gives each matchup’s good/bad result,
+            and the layout table below it gives the maps you want and would avoid. Plurals and small
+            typos in army names are matched anyway.
+          </p>
+          <p class="format-note">
+            <strong>Or line by line:</strong>
+          </p>
           <dl class="format-list">
             <dt>round: 2</dt>
             <dd>The tournament round. Fixes the layout the Refused and Champion tables play.</dd>
@@ -946,6 +977,71 @@ function submit() {
   font-size: 13px;
   font-weight: 500;
   color: var(--color-muted);
+}
+
+/* Download the ready-to-fill spreadsheet for a chosen team size — a size picker
+   and a compact download pill, sat opposite the step title. */
+.download-example {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  white-space: nowrap;
+}
+
+.download-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-muted);
+}
+
+.download-size {
+  padding: 5px var(--spacing-xs);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-sm);
+  background: var(--color-canvas);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.download-size:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.download-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xxs);
+  padding: 6px var(--spacing-sm);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-soft);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.download-link:hover,
+.download-link:focus-visible {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.download-link svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .picker-rule {

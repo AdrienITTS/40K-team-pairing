@@ -7,13 +7,15 @@ import { getDisposition, type Disposition, type DispositionKey } from '../../dat
 import { boardLayout, type BoardRow, type PairingState, type Player } from '../../data/pairing'
 import {
   bpWinThreshold,
-  gradeBp,
+  columnBp,
+  columnGrade,
   readEstimate,
   type EstimateGrade,
+  type TableColumn,
   type TableQuality,
 } from '../../data/estimates'
 
-const props = defineProps<{ state: PairingState; open: boolean }>()
+const props = defineProps<{ state: PairingState }>()
 const emit = defineEmits<{ close: [] }>()
 
 const ourSide = computed(() => props.state.config.estimateSide ?? 'A')
@@ -26,6 +28,37 @@ const oppTeam = computed(() =>
 )
 
 const board = computed(() => boardLayout(props.state))
+
+/**
+ * The tables currently up for grabs: while a Defender's opponent is being
+ * counter-picked, the two proposed Attackers sit facing the Defender as
+ * candidates. Collect each possible pairing so the grid can highlight the
+ * estimate for every proposed-but-not-yet-chosen match-up while the pick is
+ * live. Keyed `<our id>|<their id>` to line up with the matrix cells.
+ */
+const proposedKeys = computed(() => {
+  const keys = new Set<string>()
+  for (const row of board.value.rows) {
+    const aCands = row.aCandidates
+    const bCands = row.bCandidates
+    if (!aCands?.length && !bCands?.length) continue
+    const aPlayers = aCands?.length ? aCands.map((s) => s.player) : row.a ? [row.a.player] : []
+    const bPlayers = bCands?.length ? bCands.map((s) => s.player) : row.b ? [row.b.player] : []
+    for (const pa of aPlayers) {
+      for (const pb of bPlayers) {
+        keys.add(ourSide.value === 'A' ? `${pa.id}|${pb.id}` : `${pb.id}|${pa.id}`)
+      }
+    }
+  }
+  return keys
+})
+
+const proposedOurIds = computed(
+  () => new Set([...proposedKeys.value].map((k) => k.split('|')[0]!)),
+)
+const proposedOppIds = computed(
+  () => new Set([...proposedKeys.value].map((k) => k.split('|')[1]!)),
+)
 
 /** Rows whose two seats are both filled — the match-up is settled either way. */
 const settledRows = computed(() => board.value.rows.filter((r) => r.a && r.b))
@@ -41,18 +74,20 @@ function oppSlot(row: BoardRow) {
 /**
  * Which estimate column a settled table falls under.
  *
- * A layout stance recorded in setup wins where the table's letter is already
- * known — a layout we said we wanted is a good table whoever declared it.
- * Failing that we read the Defender role: they declare the layout, so our
- * Defender means a table that suits us and theirs one that doesn't. Roll-off
- * tables on an unrated letter imply neither.
+ * Once we've declared layout preferences for the table, the layout in play
+ * decides outright: a letter we marked `avoid` scores the bad column, a
+ * `favour` one the good column, and a neutral one the midpoint of the two. With
+ * no preferences recorded we read the Defender role instead — they declare the
+ * layout, so our Defender means a table that suits us and theirs one that
+ * doesn't. Roll-off tables on an unrated letter imply neither.
  */
-function qualityOf(row: BoardRow, ours: Player, theirs: Player): TableQuality | null {
+function qualityOf(row: BoardRow, ours: Player, theirs: Player): TableColumn | null {
   const letter = row.matchup?.layout.value
-  const recorded = letter
-    ? readEstimate(estimates.value, ours.id, theirs.id).layouts?.[letter]
-    : null
-  if (recorded) return recorded === 'favour' ? 'good' : 'bad'
+  const layouts = readEstimate(estimates.value, ours.id, theirs.id).layouts
+  if (letter && layouts && Object.keys(layouts).length > 0) {
+    const stance = layouts[letter]
+    return stance === 'avoid' ? 'bad' : stance === 'favour' ? 'good' : 'neutral'
+  }
   if (ourSlot(row)?.role === 'defender') return 'good'
   if (oppSlot(row)?.role === 'defender') return 'bad'
   return null
@@ -62,7 +97,7 @@ interface SettledTable {
   key: string
   ours: Player
   theirs: Player
-  quality: TableQuality | null
+  quality: TableColumn | null
   grade: EstimateGrade | null
   bp: number | null
 }
@@ -72,16 +107,18 @@ const settled = computed<SettledTable[]>(() =>
     const ours = ourSlot(row)!.player
     const theirs = oppSlot(row)!.player
     const quality = qualityOf(row, ours, theirs)
-    // With no implied column, fall back to the good one — the panel flags it so
-    // the roll-off is visible rather than silently optimistic.
-    const grade = readEstimate(estimates.value, ours.id, theirs.id)[quality ?? 'good']
+    const cell = readEstimate(estimates.value, ours.id, theirs.id)
+    // With no implied column, fall back to the neutral one — the midpoint of the
+    // two estimates — and the panel flags it as a roll-off rather than assuming
+    // the table suits us.
+    const column = quality ?? 'neutral'
     return {
       key: `${ours.id}|${theirs.id}`,
       ours,
       theirs,
       quality,
-      grade,
-      bp: grade ? gradeBp(grade) : null,
+      grade: columnGrade(cell, column),
+      bp: columnBp(cell, column),
     }
   }),
 )
@@ -123,198 +160,179 @@ function dispAccent(key: DispositionKey) {
 </script>
 
 <template>
-  <Transition name="drawer">
-    <aside v-if="open" class="drawer" aria-label="Matchup estimates">
-      <header class="drawer-head">
-        <div>
-          <p class="drawer-eyebrow">Estimates</p>
-          <h2 class="drawer-title">{{ ourTeam.name }}</h2>
-        </div>
-        <button
-          type="button"
-          class="drawer-close"
-          aria-label="Hide estimates"
-          @click="emit('close')"
-        >
-          ✕
-        </button>
-      </header>
-
-      <div class="drawer-body">
-        <section class="block">
-          <h3 class="block-title">Still open</h3>
-          <p v-if="!ourOpen.length" class="empty">Every table is settled.</p>
-          <div v-else class="scroller">
-            <table class="matrix" :style="{ '--cols': oppOpen.length }">
-              <thead>
-                <tr>
-                  <th scope="col" class="corner"></th>
-                  <th v-for="opp in oppOpen" :key="opp.id" scope="col" class="col-head">
-                    <span class="col-head-inner">
-                      <span class="tile">
-                        <img
-                          v-if="opp.faction"
-                          :src="`/images/factions/${opp.faction}.webp`"
-                          :alt="factionName(opp.faction)"
-                          width="24"
-                          height="24"
-                          loading="lazy"
-                        />
-                        <span v-else aria-hidden="true">·</span>
-                      </span>
-                      <span
-                        v-if="disp(opp)"
-                        class="disp-badge"
-                        :style="dispAccent(disp(opp)!.key)"
-                        :title="disp(opp)!.name"
-                      >
-                        <DispositionIcon :symbol="disp(opp)!.symbol" />
-                      </span>
-                    </span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="our in ourOpen" :key="our.id">
-                  <th scope="row" class="row-head">
-                    <span class="row-head-inner">
-                      <span class="tile">
-                        <img
-                          v-if="our.faction"
-                          :src="`/images/factions/${our.faction}.webp`"
-                          :alt="factionName(our.faction)"
-                          width="24"
-                          height="24"
-                          loading="lazy"
-                        />
-                        <span v-else aria-hidden="true">·</span>
-                      </span>
-                      <span class="row-name">{{ factionName(our.faction) }}</span>
-                      <span
-                        v-if="disp(our)"
-                        class="disp-badge"
-                        :style="dispAccent(disp(our)!.key)"
-                        :title="disp(our)!.name"
-                      >
-                        <DispositionIcon :symbol="disp(our)!.symbol" />
-                      </span>
-                    </span>
-                  </th>
-                  <td v-for="opp in oppOpen" :key="opp.id" class="cell">
-                    <span class="cell-inner">
-                      <GradeChip
-                        v-for="quality in qualities"
-                        :key="quality"
-                        :grade="cellGrade(our, opp, quality)"
-                      />
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="hint">
-            Left chip = a table that suits you, right = one that doesn't.
-            <template v-if="oppOpen.length > 4">Scroll sideways for the rest.</template>
-          </p>
-        </section>
-
-        <section v-if="settled.length" class="block">
-          <h3 class="block-title">Settled ({{ settled.length }})</h3>
-          <ul class="settled-list">
-            <li v-for="t in settled" :key="t.key" class="settled-row">
-              <span class="tile">
-                <img
-                  v-if="t.ours.faction"
-                  :src="`/images/factions/${t.ours.faction}.webp`"
-                  :alt="factionName(t.ours.faction)"
-                  width="24"
-                  height="24"
-                  loading="lazy"
-                />
-                <span v-else aria-hidden="true">·</span>
-              </span>
-              <span class="settled-vs">vs</span>
-              <span class="tile">
-                <img
-                  v-if="t.theirs.faction"
-                  :src="`/images/factions/${t.theirs.faction}.webp`"
-                  :alt="factionName(t.theirs.faction)"
-                  width="24"
-                  height="24"
-                  loading="lazy"
-                />
-                <span v-else aria-hidden="true">·</span>
-              </span>
-              <span class="settled-quality" :class="t.quality ?? 'rolloff'">
-                {{
-                  t.quality === 'good'
-                    ? 'our table'
-                    : t.quality === 'bad'
-                      ? 'their table'
-                      : 'roll-off'
-                }}
-              </span>
-              <GradeChip :grade="t.grade" />
-              <span class="settled-bp">{{ t.bp !== null ? `${t.bp} BP` : '—' }}</span>
-            </li>
-          </ul>
-        </section>
+  <aside class="drawer" aria-label="Matchup estimates">
+    <header class="drawer-head">
+      <div>
+        <p class="drawer-eyebrow">Estimates</p>
+        <h2 class="drawer-title">{{ ourTeam.name }}</h2>
       </div>
+      <button type="button" class="drawer-close" aria-label="Hide estimates" @click="emit('close')">
+        ✕
+      </button>
+    </header>
 
-      <footer class="drawer-foot" :class="verdict">
-        <div class="tally">
-          <span class="tally-bp">{{ ourBp }} – {{ oppBp }}</span>
-          <span class="tally-verdict">{{ verdictLabel }}</span>
+    <div class="drawer-body">
+      <section class="block open-block">
+        <h3 class="block-title">Still open</h3>
+        <p v-if="!ourOpen.length" class="empty">Every table is settled.</p>
+        <div v-else class="scroller">
+          <table class="matrix" :style="{ '--cols': oppOpen.length }">
+            <thead>
+              <tr>
+                <th scope="col" class="corner"></th>
+                <th
+                  v-for="opp in oppOpen"
+                  :key="opp.id"
+                  scope="col"
+                  class="col-head"
+                  :class="{ proposed: proposedOppIds.has(opp.id) }"
+                >
+                  <span class="col-head-inner">
+                    <span class="tile">
+                      <img
+                        v-if="opp.faction"
+                        :src="`/images/factions/${opp.faction}.webp`"
+                        :alt="factionName(opp.faction)"
+                        width="24"
+                        height="24"
+                        loading="lazy"
+                      />
+                      <span v-else aria-hidden="true">·</span>
+                    </span>
+                    <span
+                      v-if="disp(opp)"
+                      class="disp-badge"
+                      :style="dispAccent(disp(opp)!.key)"
+                      :title="disp(opp)!.name"
+                    >
+                      <DispositionIcon :symbol="disp(opp)!.symbol" />
+                    </span>
+                  </span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="our in ourOpen" :key="our.id">
+                <th
+                  scope="row"
+                  class="row-head"
+                  :class="{ proposed: proposedOurIds.has(our.id) }"
+                >
+                  <span class="row-head-inner">
+                    <span class="tile" :title="factionName(our.faction)">
+                      <img
+                        v-if="our.faction"
+                        :src="`/images/factions/${our.faction}.webp`"
+                        :alt="factionName(our.faction)"
+                        width="24"
+                        height="24"
+                        loading="lazy"
+                      />
+                      <span v-else aria-hidden="true">·</span>
+                    </span>
+                    <span
+                      v-if="disp(our)"
+                      class="disp-badge"
+                      :style="dispAccent(disp(our)!.key)"
+                      :title="disp(our)!.name"
+                    >
+                      <DispositionIcon :symbol="disp(our)!.symbol" />
+                    </span>
+                  </span>
+                </th>
+                <td
+                  v-for="opp in oppOpen"
+                  :key="opp.id"
+                  class="cell"
+                  :class="{ proposed: proposedKeys.has(`${our.id}|${opp.id}`) }"
+                >
+                  <span class="cell-inner">
+                    <GradeChip
+                      v-for="quality in qualities"
+                      :key="quality"
+                      :grade="cellGrade(our, opp, quality)"
+                    />
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <p class="tally-note">
-          {{ graded.length }} of {{ ourTeam.players.length }} tables estimated · needs a
-          {{ threshold }} BP margin to win
-        </p>
-      </footer>
-    </aside>
-  </Transition>
+        <p class="hint">Left chip = a table that suits you, right = one that doesn't.</p>
+      </section>
+
+      <!-- The estimate each already-decided match-up scores, so the running tally
+           is auditable table by table. -->
+      <section v-if="settled.length" class="block">
+        <h3 class="block-title">Settled ({{ settled.length }})</h3>
+        <ul class="settled-list">
+          <li v-for="t in settled" :key="t.key" class="settled-row">
+            <span class="tile">
+              <img
+                v-if="t.ours.faction"
+                :src="`/images/factions/${t.ours.faction}.webp`"
+                :alt="factionName(t.ours.faction)"
+                width="22"
+                height="22"
+                loading="lazy"
+              />
+              <span v-else aria-hidden="true">·</span>
+            </span>
+            <span class="settled-vs">vs</span>
+            <span class="tile">
+              <img
+                v-if="t.theirs.faction"
+                :src="`/images/factions/${t.theirs.faction}.webp`"
+                :alt="factionName(t.theirs.faction)"
+                width="22"
+                height="22"
+                loading="lazy"
+              />
+              <span v-else aria-hidden="true">·</span>
+            </span>
+            <span class="settled-quality" :class="t.quality ?? 'rolloff'">
+              {{
+                t.quality === 'good'
+                  ? 'our table'
+                  : t.quality === 'bad'
+                    ? 'their table'
+                    : t.quality === 'neutral'
+                      ? 'neutral table'
+                      : 'roll-off'
+              }}
+            </span>
+            <GradeChip :grade="t.grade" />
+            <span class="settled-bp">{{ t.bp !== null ? `${t.bp} BP` : '—' }}</span>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <footer class="drawer-foot" :class="verdict">
+      <div class="tally">
+        <span class="tally-bp">{{ ourBp }} – {{ oppBp }}</span>
+        <span class="tally-verdict">{{ verdictLabel }}</span>
+      </div>
+      <p class="tally-note">
+        {{ graded.length }} of {{ ourTeam.players.length }} tables estimated · needs a
+        {{ threshold }} BP margin to win
+      </p>
+    </footer>
+  </aside>
 </template>
 
 <style scoped>
-/* A fixed right-hand rail rather than a third grid column: the board and the
-   selection card already fill the working area, and the panel has to be
-   dismissable anyway (it is one team's prep, read on a shared device). Wide
-   viewports get the rail's width back as padding on the page (see PairingView's
-   `.rail-open`), so the pairing controls stay clickable beside it. */
+/* An in-flow card in the live layout's right column, beside the board. It is
+   one team's private prep, so the header carries a hide button that collapses
+   it (the device is passed between captains). */
 .drawer {
-  position: fixed;
-  top: 65px;
-  right: 0;
-  bottom: 0;
-  width: var(--rail-width);
-  z-index: 40;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   background: var(--color-surface-card);
-  border-left: 1px solid var(--color-hairline);
-}
-
-.drawer-enter-active,
-.drawer-leave-active {
-  transition: transform 0.22s ease;
-}
-
-.drawer-enter-from,
-.drawer-leave-to {
-  transform: translateX(100%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .drawer-enter-active,
-  .drawer-leave-active {
-    transition: none;
-  }
-
-  .drawer-enter-from,
-  .drawer-leave-to {
-    transform: none;
-  }
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
 }
 
 .drawer-head {
@@ -359,19 +377,17 @@ function dispAccent(key: DispositionKey) {
 }
 
 .drawer-body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
   padding: var(--spacing-md);
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: var(--spacing-md);
 }
 
 .block {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
+  min-width: 0;
 }
 
 .block-title {
@@ -405,12 +421,14 @@ function dispAccent(key: DispositionKey) {
 .matrix {
   border-collapse: collapse;
   width: 100%;
-  min-width: calc(132px + var(--cols, 6) * 58px);
+  min-width: calc(68px + var(--cols, 6) * 56px);
   table-layout: fixed;
 }
 
+/* Just wide enough for the row's logo and Disposition badge — the faction names
+   are gone from the grid, so the row header stays a compact identifier. */
 .corner {
-  width: 132px;
+  width: 68px;
 }
 
 .col-head {
@@ -419,10 +437,13 @@ function dispAccent(key: DispositionKey) {
   background: var(--color-surface-soft);
 }
 
+/* Opponent identity reads on one line — logo then Disposition badge — rather
+   than stacked, matching the row heads down the left edge. */
 .col-head-inner {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
   gap: 2px;
 }
 
@@ -430,24 +451,14 @@ function dispAccent(key: DispositionKey) {
   padding: 2px var(--spacing-xs);
   border-top: 1px solid var(--color-hairline-soft);
   background: var(--color-surface-soft);
-  text-align: left;
+  text-align: center;
 }
 
 .row-head-inner {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-xxs);
-}
-
-.row-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--color-ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .cell {
@@ -462,12 +473,28 @@ function dispAccent(key: DispositionKey) {
   justify-content: center;
 }
 
-/* Tighter than the setup grid's chips: sized so a six-a-side round's columns
-   all fit the rail. Bigger teams overflow and the scroller takes over. */
+/* The tables in play while a Defender's opponent is being counter-picked: each
+   proposed pairing's estimate lights up so the live choice reads at a glance.
+   The header tint marks the players involved; the cell ring points at the
+   grades that actually decide the pick. */
+.col-head.proposed,
+.row-head.proposed {
+  background: var(--color-primary-tint);
+  color: var(--color-primary);
+}
+
+.cell.proposed {
+  background: var(--color-primary-tint);
+  outline: 2px solid var(--color-primary);
+  outline-offset: -2px;
+}
+
+/* Sized for legibility now the rail is wider — a six/seven-a-side round's
+   columns all fit, and an eight overflows into the scroller. */
 .cell-inner :deep(.grade) {
-  min-width: 20px;
-  padding: 2px 3px;
-  font-size: 10px;
+  min-width: 22px;
+  padding: 2px 4px;
+  font-size: 11px;
 }
 
 .tile {
@@ -597,14 +624,6 @@ function dispAccent(key: DispositionKey) {
   color: var(--color-muted);
 }
 
-/* Below the point where the page can give up the rail's width, the panel takes
-   the whole screen instead of half-covering the board it is meant to annotate. */
-@media (max-width: 1100px) {
-  .drawer {
-    width: 100vw;
-  }
-}
-
 @media (max-width: 720px) {
   .drawer-head,
   .drawer-body {
@@ -618,13 +637,6 @@ function dispAccent(key: DispositionKey) {
 
   .drawer-foot {
     padding: var(--spacing-sm);
-  }
-
-  /* Full-screen on a phone, so the matrix gets the whole width and the row
-     headers can afford their faction names again. */
-  .corner,
-  .row-head {
-    width: 120px;
   }
 }
 </style>

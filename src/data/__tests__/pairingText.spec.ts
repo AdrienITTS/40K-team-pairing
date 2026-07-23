@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
-import { EXAMPLE_SETUP, parsePairingConfig, serializePairingConfig } from '../pairingText'
-import { estimateKey } from '../estimates'
+import { EXAMPLE_SETUP, parsePairingConfig } from '../pairingText'
+import { estimateKey, readEstimate } from '../estimates'
 import { createPairingState } from '../pairing'
 
 /** A minimal legal four-player setup, built up per test. */
@@ -248,43 +248,321 @@ b: Thousand Sons
   })
 })
 
-describe('serializePairingConfig', () => {
-  it('round-trips a parsed setup unchanged', () => {
-    const { config } = parse(EXAMPLE_SETUP)
-    const text = serializePairingConfig(config!)
-    const { config: again, errors } = parse(text)
+// The exact A1:O22 block copied out of the team's "W40k - Estimation" sheet
+// (Template V11 tab), as tab-separated rows — the shape a Google Sheets copy
+// produces. Kept as arrays so the tabs are unambiguous.
+const SHEET_ROWS: string[][] = [
+  ['Preparation', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  [
+    'Team : ',
+    'Bastonneurs',
+    'Opponents : ',
+    'Méchants',
+    '',
+    'Round : ',
+    '',
+    '2',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+    '',
+  ],
+  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  [
+    '',
+    '',
+    '',
+    'Chaos Space Marine',
+    '',
+    'World Eater',
+    '',
+    'Space Wolves',
+    '',
+    'Adepta Sororitas',
+    '',
+    'Imperial Knigths',
+    '',
+    'Death Guard',
+    '',
+  ],
+  [
+    '',
+    '',
+    '',
+    'Priority Assets',
+    '',
+    'Take and Hold',
+    '',
+    'Disruption',
+    '',
+    'Purge the Foe',
+    '',
+    'Disruption',
+    '',
+    'Reconnaissance',
+    '',
+  ],
+  ['Player', 'Faction', 'Disposition', 'C', '', 'D', '', 'E', '', 'F', '', 'G', '', 'H', ''],
+  [
+    'Barberousse',
+    'Leagues of Votann',
+    'Disruption',
+    'D',
+    'D-',
+    'GW',
+    'L',
+    'W',
+    'L',
+    'W',
+    'D+',
+    'W',
+    'W',
+    'D-',
+    'D-',
+  ],
+  [
+    'Hoxstun',
+    'Genestealers Cult',
+    'Reconnaissance',
+    'D',
+    'L',
+    'W',
+    'L',
+    'D+',
+    'W',
+    'W',
+    'D-',
+    'GW',
+    'D-',
+    'GW',
+    'L',
+  ],
+  [
+    'Kuroy',
+    'Necrons',
+    'Purge the Foe',
+    'GW',
+    'L',
+    'W',
+    'L',
+    'W',
+    'D+',
+    'W',
+    'D',
+    'W',
+    'L',
+    'W',
+    'GL',
+  ],
+  [
+    'MonkeyDidi',
+    'Thousand Sons',
+    'Reconnaissance',
+    'D',
+    'D',
+    'D+',
+    'GL',
+    'W',
+    'W',
+    'D-',
+    'D-',
+    'GW',
+    'L',
+    'GW',
+    'GL',
+  ],
+  [
+    'RocketOwlet',
+    'Drukhari',
+    'Priority Assets',
+    'W',
+    'L',
+    'D',
+    'D',
+    'D',
+    'L',
+    'L',
+    'L',
+    'W',
+    'W',
+    'L',
+    'D',
+  ],
+  [
+    'Zerk',
+    "T'au Empire",
+    'Take and Hold',
+    'W',
+    'GL',
+    'W',
+    'D-',
+    'D-',
+    'GL',
+    'D',
+    'L',
+    'D',
+    'GL',
+    'GW',
+    'L',
+  ],
+  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  ['Estimés : Colonne de Gauche', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+  ['Player', 'Faction', 'Disposition', 'C', '', 'D', '', 'E', '', 'F', '', 'G', '', 'H', ''],
+  [
+    'Barberousse',
+    'Leagues of Votann',
+    'Disruption',
+    'A',
+    'C',
+    '',
+    'C',
+    'C',
+    'B',
+    'B',
+    '',
+    '',
+    'B',
+    '',
+    'C',
+  ],
+  [
+    'Hoxstun',
+    'Genestealers Cult',
+    'Reconnaissance',
+    'B',
+    '',
+    '',
+    'C',
+    '',
+    'A,C',
+    '',
+    'B',
+    'C',
+    'A',
+    'A',
+    '',
+  ],
+  ['Kuroy', 'Necrons', 'Purge the Foe', 'A', '', 'B', '', 'B', '', 'A,C', '', 'C', 'B', '', 'B'],
+  [
+    'MonkeyDidi',
+    'Thousand Sons',
+    'Reconnaissance',
+    'C',
+    'B',
+    '',
+    'A',
+    'A,B',
+    '',
+    '',
+    'C',
+    'B,C',
+    '',
+    'B',
+    '',
+  ],
+  [
+    'RocketOwlet',
+    'Drukhari',
+    'Priority Assets',
+    'C',
+    'A',
+    '',
+    'C',
+    '',
+    'B',
+    'C',
+    '',
+    'A',
+    '',
+    '',
+    'A',
+  ],
+  ['Zerk', "T'au Empire", 'Take and Hold', 'B', '', 'B,C', '', 'C', 'B', '', 'A', '', 'B', 'C', ''],
+]
+
+const SHEET = SHEET_ROWS.map((r) => r.join('\t')).join('\n')
+
+describe('parsePairingConfig — spreadsheet paste', () => {
+  it('reads the team name, round and both rosters from a Template V11 copy', () => {
+    const { config, errors } = parse(SHEET)
     expect(errors).toEqual([])
-    expect(again).toEqual(config)
+    expect(config).not.toBeNull()
+    expect(config!.round).toBe(2)
+    expect(config!.teamA.name).toBe('Bastonneurs')
+    expect(config!.teamB.name).toBe('Méchants')
+    expect(config!.estimateSide).toBe('A')
+    expect(config!.teamA.players.map((p) => p.faction)).toEqual([
+      'leagues_of_votann',
+      'genestealer_cults',
+      'necrons',
+      'thousand_sons',
+      'drukhari',
+      'tau',
+    ])
+    // Opponent order follows the header columns C…H.
+    expect(config!.teamB.players.map((p) => p.faction)).toEqual([
+      'chaos_space_marines',
+      'world_eaters',
+      'space_wolves',
+      'adepta_sororitas',
+      'imperial_knights',
+      'death_guard',
+    ])
   })
 
-  it('round-trips a setup with no dispositions or estimates', () => {
+  it('carries each player’s Force Disposition through', () => {
+    const { config } = parse(SHEET)
+    expect(config!.teamA.players[0]!.disposition).toBe('disruption')
+    expect(config!.teamB.players[0]!.disposition).toBe('priority-assets')
+    expect(config!.teamB.players[1]!.disposition).toBe('take-and-hold')
+  })
+
+  it('tolerates the sheet’s plurals and typos when matching armies', () => {
+    // "World Eater", "Imperial Knigths", "Genestealers Cult" all resolve.
+    const { errors } = parse(SHEET)
+    expect(errors).toEqual([])
+  })
+
+  it('reads the good/bad grades from the upper table', () => {
+    const { config } = parse(SHEET)
+    // Barberousse (Votann) vs opponent C (Chaos Space Marines): good D, bad D-.
+    const cell = readEstimate(config!.estimates, 'a-leagues_of_votann', 'b-chaos_space_marines')
+    expect(cell.good).toBe('D')
+    expect(cell.bad).toBe('D-')
+  })
+
+  it('reads the favour/avoid layouts from the lower table', () => {
+    const { config } = parse(SHEET)
+    // Barberousse (Votann) vs opponent C: favour A, avoid C.
+    const c = readEstimate(config!.estimates, 'a-leagues_of_votann', 'b-chaos_space_marines')
+    expect(c.layouts).toEqual({ A: 'favour', C: 'avoid' })
+    // Kuroy (Necrons) vs opponent F (Adepta Sororitas): favour A and C (from "A,C").
+    const f = readEstimate(config!.estimates, 'a-necrons', 'b-adepta_sororitas')
+    expect(f.layouts).toEqual({ A: 'favour', C: 'favour' })
+    // Hoxstun (GSC) vs opponent E (Space Wolves): avoid A and C (right column).
+    const e = readEstimate(config!.estimates, 'a-genestealer_cults', 'b-space_wolves')
+    expect(e.layouts).toEqual({ A: 'avoid', C: 'avoid' })
+  })
+
+  it('produces a config the state machine accepts', () => {
+    const { config } = parse(SHEET)
+    expect(() => createPairingState(config!)).not.toThrow()
+  })
+
+  it('flags an unreadable grade with its cell', () => {
+    const broken = SHEET_ROWS.map((r) => [...r])
+    broken[6]![3] = 'ZZ' // Barberousse vs C, good column (D7)
+    const { config, errors } = parse(broken.map((r) => r.join('\t')).join('\n'))
+    expect(config).toBeNull()
+    expect(errors.join(' ')).toContain('isn’t a grade')
+  })
+
+  it('falls back to the directive parser when there are no tabs', () => {
     const { config } = parse(MINIMAL)
-    const { config: again } = parse(serializePairingConfig(config!))
-    expect(again).toEqual(config)
-  })
-
-  it('is stable — serialising twice gives the same text', () => {
-    const { config } = parse(EXAMPLE_SETUP)
-    const once = serializePairingConfig(config!)
-    expect(serializePairingConfig(parse(once).config!)).toBe(once)
-  })
-
-  it('writes ? for a missing grade so the columns stay positional', () => {
-    const { config } = parse(`${MINIMAL}\nest: Orks vs Tyranids = ? GL`)
-    expect(serializePairingConfig(config!)).toContain('est: Orks vs Tyranids = ? GL')
-  })
-
-  it('groups the layout flags by stance in A/B/C order', () => {
-    const { config } = parse(`${MINIMAL}\nest: Orks vs Tyranids = W D -C +A -B`)
-    expect(serializePairingConfig(config!)).toContain('= W D +A -BC')
-  })
-
-  it('emits estimates in roster order, not entry order', () => {
-    const { config } = parse(`${MINIMAL}
-est: Orks vs Tyranids = W D
-est: Aeldari vs Grey Knights = L L
-`)
-    const text = serializePairingConfig(config!)
-    expect(text.indexOf('est: Aeldari')).toBeLessThan(text.indexOf('est: Orks'))
+    expect(config!.teamA.players).toHaveLength(4)
   })
 })

@@ -4,8 +4,7 @@
  * A whole round's prep — rosters, Force Dispositions, and Team A's matchup
  * estimates — as something a captain can keep in a note, mail to a teammate, or
  * generate out of a spreadsheet, then paste in to land straight on the live
- * pairing board. `serializePairingConfig` and `parsePairingConfig` are inverses,
- * so a round set up once through the wizard can be copied back out and replayed.
+ * pairing board via `parsePairingConfig`.
  *
  * The grammar is one `key: value` directive per line; `#` starts a comment line
  * and blank lines are ignored. Keys are case-insensitive and matched with
@@ -26,6 +25,12 @@
  * Army and Disposition names are matched leniently — case, spacing and
  * punctuation are ignored, and either the display name or the internal key
  * works — so `T'au Empire`, `tau` and `TAU` all resolve to the same faction.
+ *
+ * `parsePairingConfig` also accepts a second shape: the tab-separated block a
+ * captain copies straight out of the team's "W40k - Estimation" Google Sheet
+ * (the `Template V11` tab, range A1:O22). Any pasted text containing a tab is
+ * routed to `parseSpreadsheetConfig`, which reads the same rosters, grades and
+ * layout preferences off that grid — see its own doc comment for the geometry.
  */
 
 import { allegiances, factionName, isSpaceMarine } from './factions'
@@ -53,8 +58,6 @@ const ESTIMATE_SIDE: TeamSide = 'A'
 
 /** Accepted between an army and its Force Disposition on a player line. */
 const PLAYER_SEPARATORS = /\s*[·|/,]\s*/
-
-const LAYOUT_LETTERS: readonly LayoutLetter[] = ['A', 'B', 'C']
 
 /** Case/punctuation-insensitive form used to match names against keys. */
 function norm(value: string): string {
@@ -111,6 +114,10 @@ interface EstEntry {
 }
 
 export function parsePairingConfig(text: string): ParsedSetup {
+  // A tab means the text was copied out of a spreadsheet rather than typed as
+  // directives — read it as the team's Google Sheet export instead.
+  if (text.includes('\t')) return parseSpreadsheetConfig(text)
+
   const errors: string[] = []
   const warnings: string[] = []
   const roster: Record<TeamSide, RosterEntry[]> = { A: [], B: [] }
@@ -284,6 +291,299 @@ function parseEstimate(value: string, line: number, errors: string[]): EstEntry 
   return { ourFaction, oppFaction, cell, line }
 }
 
+// --- Spreadsheet paste (the team's own Google Sheet) -------------------------
+
+/**
+ * The other accepted paste shape: the block a captain copies straight out of the
+ * team's "W40k - Estimation" Google Sheet (the `Template V11` tab, range
+ * A1:O22). Copying spreadsheet cells yields tab-separated rows, so any text
+ * carrying a tab lands here instead of the directive parser above.
+ *
+ * The sheet stacks two tables sharing one column geometry: a Player / Faction /
+ * Disposition key in columns A–C, then one opponent every two columns from D
+ * onward. The upper table's two sub-columns per opponent are the good- and
+ * bad-table grades; the lower table's are the layouts to favour and to avoid.
+ * Opponent armies and Dispositions sit two and one rows above the upper header.
+ * Rows and columns are found by their labels, not fixed indices, so an extra
+ * blank column or a shifted copy still reads.
+ */
+export function parseSpreadsheetConfig(text: string): ParsedSetup {
+  const errors: string[] = []
+  const warnings: string[] = []
+
+  const grid = text.split(/\r?\n/).map((row) => row.split('\t'))
+  const width = grid.reduce((w, row) => Math.max(w, row.length), 0)
+  const at = (r: number, c: number): string => (grid[r]?.[c] ?? '').trim()
+  const rowLen = (r: number): number => grid[r]?.length ?? 0
+
+  // Spreadsheet column letter for an error message (A, B, … from a 0-based idx).
+  const colLetter = (c: number): string => (c < 26 ? String.fromCharCode(65 + c) : `col ${c + 1}`)
+
+  // The two "Player | Faction | Disposition" table headers anchor everything.
+  const headers: number[] = []
+  grid.forEach((_, r) => {
+    if (norm(at(r, 0)) === 'player' && norm(at(r, 1)) === 'faction') headers.push(r)
+  })
+  if (headers.length === 0) {
+    errors.push(
+      'Couldn’t find the “Player / Faction / Disposition” header — copy the whole Template V11 range (A1:O22) from your sheet.',
+    )
+    return { config: null, errors, warnings }
+  }
+  const gradesHeader = headers[0]!
+  const layoutsHeader = headers[1]
+  const factionsRow = gradesHeader - 2
+  const dispRow = gradesHeader - 1
+  if (factionsRow < 0) {
+    errors.push(
+      'The opponents’ armies should sit two rows above the “Player” header — start the copy at row 1.',
+    )
+    return { config: null, errors, warnings }
+  }
+
+  // Team names and round live in the header block above the grades table. The
+  // first value to the right of each label is what we want.
+  const firstRight = (r: number, from: number): string => {
+    for (let k = from; k < rowLen(r); k++) if (at(r, k)) return at(r, k)
+    return ''
+  }
+  let teamName = ''
+  let oppName = ''
+  let round = 1
+  for (let r = 0; r < gradesHeader; r++) {
+    for (let c = 0; c < rowLen(r); c++) {
+      const label = norm(at(r, c))
+      if (!teamName && label === 'team') teamName = firstRight(r, c + 1)
+      if (!oppName && (label === 'opponents' || label === 'opponent')) {
+        oppName = firstRight(r, c + 1)
+      }
+      if (label === 'round') {
+        for (let k = c + 1; k < rowLen(r); k++) {
+          const v = at(r, k)
+          if (!v) continue
+          const n = Number(v)
+          if (Number.isFinite(n) && n >= 1) round = Math.trunc(n)
+          break
+        }
+      }
+    }
+  }
+
+  // Opponents run two columns apart from D (index 3) for as long as the armies
+  // row keeps naming one.
+  const oppCols: number[] = []
+  for (let c = 3; c < width; c += 2) {
+    if (at(factionsRow, c)) oppCols.push(c)
+    else break
+  }
+
+  const needFaction = (raw: string, row: number): string | null => {
+    const f = resolveToken(raw, FACTION_BY_TOKEN)
+    if (!f) errors.push(`Row ${row + 1}: “${raw}” isn’t an army we recognise.`)
+    return f
+  }
+  const optDisposition = (raw: string, row: number): DispositionKey | null => {
+    if (!norm(raw)) return null
+    const d = resolveToken(raw, DISPOSITION_BY_TOKEN)
+    if (!d) errors.push(`Row ${row + 1}: “${raw}” isn’t a Force Disposition.`)
+    return d
+  }
+
+  // Team B (opponents), read across the header columns.
+  const rosterB: RosterEntry[] = []
+  const oppFactionByCol = new Map<number, string>()
+  for (const c of oppCols) {
+    const faction = needFaction(at(factionsRow, c), factionsRow)
+    const disposition = optDisposition(at(dispRow, c), dispRow)
+    if (faction) {
+      rosterB.push({ faction, disposition, line: factionsRow + 1 })
+      oppFactionByCol.set(c, faction)
+    }
+  }
+
+  // Team A (us), read down the grades table until the faction column runs out.
+  const rosterA: RosterEntry[] = []
+  const ourFactionByRow = new Map<number, string>()
+  for (let r = gradesHeader + 1; r < grid.length && at(r, 1); r++) {
+    const faction = needFaction(at(r, 1), r)
+    const disposition = optDisposition(at(r, 2), r)
+    if (faction) {
+      rosterA.push({ faction, disposition, line: r + 1 })
+      ourFactionByRow.set(r, faction)
+    }
+  }
+
+  if (rosterA.length === 0 && rosterB.length === 0) {
+    if (errors.length === 0)
+      errors.push('Nothing to read yet — paste your Template V11 range above.')
+    return { config: null, errors, warnings }
+  }
+
+  const size = rosterA.length
+  if (size !== rosterB.length) {
+    errors.push(`Both teams must be the same size (you have ${size}, opponents ${rosterB.length}).`)
+  }
+  if (size < MIN_TEAM_SIZE || size > MAX_TEAM_SIZE) {
+    errors.push(`Team size must be ${MIN_TEAM_SIZE}–${MAX_TEAM_SIZE} (you have ${size}).`)
+  }
+  checkRoster('A', rosterA, size, errors)
+  checkRoster('B', rosterB, size, errors)
+  for (const [side, roster] of [
+    ['A', rosterA],
+    ['B', rosterB],
+  ] as const) {
+    if (roster.length && roster.every((p) => !p.disposition)) {
+      warnings.push(
+        `Team ${side} has no Force Dispositions, so its tables won't offer terrain layouts.`,
+      )
+    }
+  }
+
+  // One accumulating cell per (our army, their army); grades fill first, then the
+  // layout stances from the lower table land on the same cells.
+  const cells = new Map<string, EstimateCell>()
+  const cellFor = (ourFaction: string, oppFaction: string): EstimateCell => {
+    const key = estimateKey(playerId('A', ourFaction), playerId('B', oppFaction))
+    let cell = cells.get(key)
+    if (!cell) {
+      cell = { good: null, bad: null }
+      cells.set(key, cell)
+    }
+    return cell
+  }
+
+  const readGrade = (raw: string, row: number, col: number): EstimateGrade | null => {
+    const token = raw.trim().toUpperCase()
+    if (!token || token === '?') return null
+    const grade = GRADE_BY_TOKEN.get(token)
+    if (!grade) errors.push(`Row ${row + 1}, ${colLetter(col)}: “${raw}” isn’t a grade.`)
+    return grade ?? null
+  }
+
+  const readLetters = (raw: string): LayoutLetter[] => {
+    const out: LayoutLetter[] = []
+    for (const ch of raw.toUpperCase()) {
+      if ((ch === 'A' || ch === 'B' || ch === 'C') && !out.includes(ch)) out.push(ch)
+    }
+    return out
+  }
+
+  for (const [row, ourFaction] of ourFactionByRow) {
+    for (const c of oppCols) {
+      const oppFaction = oppFactionByCol.get(c)
+      if (!oppFaction) continue
+      const good = readGrade(at(row, c), row, c)
+      const bad = readGrade(at(row, c + 1), row, c + 1)
+      if (good || bad) {
+        const cell = cellFor(ourFaction, oppFaction)
+        if (good) cell.good = good
+        if (bad) cell.bad = bad
+      }
+    }
+  }
+
+  // The layout table repeats our roster; match its rows back by army so a
+  // reordered copy still lines each row up with the right grades.
+  const onA = new Set(rosterA.map((p) => p.faction))
+  if (layoutsHeader !== undefined) {
+    for (let r = layoutsHeader + 1; r < grid.length && at(r, 1); r++) {
+      const ourFaction = resolveToken(at(r, 1), FACTION_BY_TOKEN)
+      if (!ourFaction || !onA.has(ourFaction)) {
+        errors.push(
+          `Row ${r + 1}: “${at(r, 1)}” in the layouts table isn’t one of your armies above.`,
+        )
+        continue
+      }
+      for (const c of oppCols) {
+        const oppFaction = oppFactionByCol.get(c)
+        if (!oppFaction) continue
+        const favour = readLetters(at(r, c))
+        const avoid = readLetters(at(r, c + 1))
+        if (favour.length || avoid.length) {
+          const cell = cellFor(ourFaction, oppFaction)
+          const layouts = cell.layouts ?? {}
+          for (const letter of favour) layouts[letter] = 'favour'
+          for (const letter of avoid) layouts[letter] = 'avoid'
+          cell.layouts = layouts
+        }
+      }
+    }
+  }
+
+  const estimates: EstimateTable = {}
+  for (const [key, cell] of cells) {
+    if (cell.good || cell.bad || (cell.layouts && Object.keys(cell.layouts).length > 0)) {
+      estimates[key] = cell
+    }
+  }
+  if (Object.keys(estimates).length === 0) {
+    warnings.push('No estimates read, so the estimates rail and the projected result stay off.')
+  }
+
+  if (errors.length > 0) return { config: null, errors, warnings }
+
+  const players = (side: TeamSide, roster: RosterEntry[]): Player[] =>
+    roster.map((entry) => ({
+      id: playerId(side, entry.faction),
+      faction: entry.faction,
+      disposition: entry.disposition,
+    }))
+
+  return {
+    config: {
+      round,
+      teamA: { name: teamName || 'Team A', players: players('A', rosterA) },
+      teamB: { name: oppName || 'Team B', players: players('B', rosterB) },
+      estimateSide: ESTIMATE_SIDE,
+      estimates,
+    },
+    errors,
+    warnings,
+  }
+}
+
+/**
+ * Resolve a free-typed army/Disposition name to its key: an exact normalised
+ * match first, then the closest token within a couple of edits so the sheet's
+ * plurals and typos ("World Eater", "Imperial Knigths") still land. The fuzzy
+ * pass insists on a shared first letter to keep short names from colliding.
+ */
+function resolveToken<T extends string>(raw: string, byToken: Map<string, T>): T | null {
+  const key = norm(raw)
+  if (!key) return null
+  const exact = byToken.get(key)
+  if (exact) return exact
+
+  let best: T | null = null
+  let bestDist = 3
+  for (const [token, value] of byToken) {
+    if (token[0] !== key[0]) continue
+    const dist = editDistance(key, token)
+    if (dist < bestDist) {
+      bestDist = dist
+      best = value
+    }
+  }
+  return bestDist <= 2 ? best : null
+}
+
+/** Levenshtein distance, short-circuited past the 2 edits we tolerate. */
+function editDistance(a: string, b: string): number {
+  const m = a.length
+  const n = b.length
+  if (Math.abs(m - n) > 2) return 3
+  let prev = Array.from({ length: n + 1 }, (_, j) => j)
+  for (let i = 1; i <= m; i++) {
+    const curr = [i]
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      curr[j] = Math.min(prev[j]! + 1, curr[j - 1]! + 1, prev[j - 1]! + cost)
+    }
+    prev = curr
+  }
+  return prev[n]!
+}
+
 /** GAME.MD § 1 roster rules, which the wizard enforces by disabling chips. */
 function checkRoster(side: TeamSide, entries: RosterEntry[], size: number, errors: string[]) {
   const seen = new Set<string>()
@@ -349,66 +649,6 @@ function buildEstimates(
   }
 
   return table
-}
-
-// --- Serialising -------------------------------------------------------------
-
-/** The inverse of `parsePairingConfig` — a setup as pasteable text. */
-export function serializePairingConfig(config: PairingConfig): string {
-  const lines: string[] = [
-    '# Warhammer 40,000 Teams Event — pairing setup',
-    `round: ${config.round}`,
-    `team a: ${config.teamA.name}`,
-    `team b: ${config.teamB.name}`,
-    '',
-  ]
-
-  for (const [side, team] of [
-    ['a', config.teamA],
-    ['b', config.teamB],
-  ] as const) {
-    for (const player of team.players) {
-      const army = factionName(player.faction)
-      const disposition = player.disposition ? ` · ${getDisposition(player.disposition).name}` : ''
-      lines.push(`${side}: ${army}${disposition}`)
-    }
-    lines.push('')
-  }
-
-  // Estimates are Team A's, keyed `<our id>|<their id>`; walk both rosters so the
-  // lines come out in roster order rather than whatever order they were entered.
-  const estimates = config.estimates ?? {}
-  const estimateLines: string[] = []
-  for (const ours of config.teamA.players) {
-    for (const theirs of config.teamB.players) {
-      const cell = estimates[estimateKey(ours.id, theirs.id)]
-      if (!cell) continue
-      const flags = LAYOUT_LETTERS.reduce<Record<LayoutStance, string>>(
-        (acc, letter) => {
-          const stance = cell.layouts?.[letter]
-          if (stance) acc[stance] += letter
-          return acc
-        },
-        { favour: '', avoid: '' },
-      )
-      const trailing = [
-        flags.favour && `+${flags.favour}`,
-        flags.avoid && `-${flags.avoid}`,
-      ].filter(Boolean)
-      if (!cell.good && !cell.bad && trailing.length === 0) continue
-      const result = [cell.good ?? '?', cell.bad ?? '?', ...trailing].join(' ')
-      estimateLines.push(
-        `est: ${factionName(ours.faction)} vs ${factionName(theirs.faction)} = ${result}`,
-      )
-    }
-  }
-
-  if (estimateLines.length > 0) {
-    lines.push("# Team A's estimates: <good table> <bad table>, then +want / -avoid layouts")
-    lines.push(...estimateLines)
-  }
-
-  return `${lines.join('\n').trimEnd()}\n`
 }
 
 /** A worked four-player setup, offered as a starting point in the paste step. */

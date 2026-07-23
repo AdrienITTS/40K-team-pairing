@@ -324,7 +324,7 @@ describe('boardLayout', () => {
     expect(poolIds).not.toContain('b-0')
   })
 
-  it('keeps the Defender rows one-sided once Attackers are nominated, listing Attackers in the pool', () => {
+  it('shows the nominated Attackers as candidates facing each Defender, out of the pool', () => {
     let state = createPairingState(config(5))
     state = submitDefender(state, 'a-0')
     state = submitDefender(state, 'b-0')
@@ -334,12 +334,21 @@ describe('boardLayout', () => {
     const board = boardLayout(state)
 
     expect(board.rows).toHaveLength(2)
+    // Defender A faces Team B's two Attackers as candidates; the `b` seat stays
+    // empty until the counter-pick settles it.
+    expect(board.rows[0]!.a?.player.id).toBe('a-0')
     expect(board.rows[0]!.b).toBeNull()
+    expect(board.rows[0]!.bCandidates?.map((s) => s.player.id)).toEqual(['b-1', 'b-2'])
+    expect(board.rows[0]!.bCandidates?.every((s) => s.role === 'attacker')).toBe(true)
+    // Defender B faces Team A's two Attackers as candidates.
+    expect(board.rows[1]!.b?.player.id).toBe('b-0')
     expect(board.rows[1]!.a).toBeNull()
+    expect(board.rows[1]!.aCandidates?.map((s) => s.player.id)).toEqual(['a-1', 'a-2'])
 
-    const pool = [...board.poolA, ...board.poolB]
+    // The Attackers are no longer loose in the waiting pool.
+    const poolIds = [...board.poolA, ...board.poolB].map((s) => s.player.id)
     for (const id of ['a-1', 'a-2', 'b-1', 'b-2']) {
-      expect(pool.find((s) => s.player.id === id)?.role).toBe('attacker')
+      expect(poolIds).not.toContain(id)
     }
   })
 

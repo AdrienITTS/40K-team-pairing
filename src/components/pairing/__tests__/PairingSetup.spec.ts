@@ -229,9 +229,14 @@ describe('PairingSetup — quick pairing', () => {
     expect(Object.keys(config.estimates)).toHaveLength(4)
   })
 
-  it('fills the box from the worked example', async () => {
+  it('offers the example spreadsheet as a download for the chosen team size', async () => {
     const wrapper = await mountPaste()
-    await wrapper.find('.picker-count button').trigger('click')
-    expect((wrapper.find('.paste-input').element as HTMLTextAreaElement).value).toBe(EXAMPLE_SETUP)
+    const link = wrapper.find('.download-link')
+    expect(link.exists()).toBe(true)
+    expect(link.attributes('download')).toBeDefined()
+    // Default size, then a different size — the href tracks the picker.
+    expect(link.attributes('href')).toBe('/examples/W40k-Estimation-Template-5p.xlsx')
+    await wrapper.find('.download-size').setValue(8)
+    expect(link.attributes('href')).toBe('/examples/W40k-Estimation-Template-8p.xlsx')
   })
 })

@@ -759,6 +759,25 @@ export function factionName(key: string | null): string {
 }
 
 /**
+ * A short 2–4 letter tag for a faction, to tell the logos apart where they show
+ * small (e.g. the live selection tiles). Multi-word names use each word's
+ * initial (Chaos Space Marines → CSM); a single-word name takes its first three
+ * letters (Necrons → NEC).
+ */
+export function factionAbbr(key: string | null): string {
+  if (!key) return '—'
+  const words = factionName(key).split(/\s+/).filter(Boolean)
+  if (words.length >= 2) {
+    return words
+      .map((word) => word[0])
+      .join('')
+      .slice(0, 4)
+      .toUpperCase()
+  }
+  return (words[0] ?? '').slice(0, 3).toUpperCase()
+}
+
+/**
  * The Space Marine Chapters, which share the Adeptus Astartes identity for team
  * composition. Beyond the general one-player-per-faction-keyword rule, a roster
  * may include at most ONE of these (see GAME.MD § 1). Grey Knights are a
