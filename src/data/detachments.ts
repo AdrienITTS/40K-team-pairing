@@ -30,7 +30,7 @@ export interface Detachment {
 /** Provenance for the on-page attribution. */
 export const mfmSource = {
   name: 'Munitorum Field Manual',
-  version: 'v1.1',
+  version: 'v1.3',
   url: 'https://mfm.warhammer-community.com/en/',
 } as const
 
@@ -48,14 +48,14 @@ export const detachmentsByFaction: Record<string, Detachment[]> = {
   ],
   adeptus_custodes: [
     { name: 'Auric Champions', dp: 2, disposition: 'priority-assets' },
-    { name: 'Lions of the Emperor', dp: 2, disposition: 'disruption' },
+    { name: 'Lions of the Emperor', dp: 3, disposition: 'take-and-hold' },
     { name: 'Might of the Moritoi', dp: 1, disposition: 'take-and-hold' },
     { name: 'Null Maiden Vigil', dp: 2, disposition: 'reconnaissance' },
     { name: 'Shield Host', dp: 2, disposition: 'purge-the-foe' },
     { name: 'Silent Hunters', dp: 1, disposition: 'reconnaissance' },
     { name: 'Solar Spearhead', dp: 2, disposition: 'take-and-hold' },
     { name: 'Talons of the Emperor', dp: 3, disposition: 'take-and-hold' },
-    { name: 'Tharanatoi Hammerblow', dp: 1, disposition: 'priority-assets' },
+    { name: 'Tharanatoi Hammerblow', dp: 1, disposition: 'disruption' },
   ],
   adeptus_mechanicus: [
     { name: 'Cohort Acquisitus', dp: 1, disposition: 'reconnaissance' },
@@ -71,7 +71,7 @@ export const detachmentsByFaction: Record<string, Detachment[]> = {
   ],
   aeldari: [
     { name: 'Armoured Warhost', dp: 1, disposition: 'reconnaissance' },
-    { name: 'Aspect Host', dp: 3, disposition: 'disruption' },
+    { name: 'Aspect Host', dp: 3, disposition: 'priority-assets' },
     { name: 'Corsair Coterie', dp: 2, disposition: 'priority-assets' },
     { name: 'Devoted of Ynnead', dp: 2, disposition: 'priority-assets' },
     { name: 'Eldritch Raiders', dp: 2, disposition: 'purge-the-foe' },
@@ -95,7 +95,7 @@ export const detachmentsByFaction: Record<string, Detachment[]> = {
     { name: 'Grizzled Company', dp: 3, disposition: 'priority-assets' },
     { name: 'Hammer of the Emperor', dp: 2, disposition: 'purge-the-foe' },
     { name: 'Mechanised Assault', dp: 2, disposition: 'reconnaissance' },
-    { name: 'Recon Element', dp: 3, disposition: 'reconnaissance' },
+    { name: 'Recon Element', dp: 2, disposition: 'reconnaissance' },
     { name: 'Siege Regiment', dp: 2, disposition: 'disruption' },
     { name: 'Steel Hammer', dp: 2, disposition: 'purge-the-foe' },
   ],
@@ -150,7 +150,7 @@ export const detachmentsByFaction: Record<string, Detachment[]> = {
   chaos_daemons: [
     { name: 'Blood Legion', dp: 2, disposition: 'purge-the-foe' },
     { name: 'Cavalcade of Chaos', dp: 1, disposition: 'disruption' },
-    { name: 'Daemonic Incursion', dp: 3, disposition: 'disruption' },
+    { name: 'Daemonic Incursion', dp: 3, disposition: 'take-and-hold' },
     { name: 'Legion of Excess', dp: 2, disposition: 'priority-assets' },
     { name: 'Lords of the Warp', dp: 1, disposition: 'take-and-hold' },
     { name: 'Plague Legion', dp: 2, disposition: 'take-and-hold' },
@@ -177,7 +177,7 @@ export const detachmentsByFaction: Record<string, Detachment[]> = {
     { name: 'Devotees of Destruction', dp: 1, disposition: 'priority-assets' },
     { name: 'Dread Talons', dp: 2, disposition: 'disruption' },
     { name: 'Fellhammer Siege-Host', dp: 2, disposition: 'take-and-hold' },
-    { name: 'Huron’s Marauders', dp: 3, disposition: 'disruption' },
+    { name: 'Huron’s Marauders', dp: 3, disposition: 'purge-the-foe' },
     { name: 'Murdertalon Raiders', dp: 1, disposition: 'reconnaissance' },
     { name: 'Nightmare Hunt', dp: 2, disposition: 'disruption' },
     { name: 'Pactbound Zealots', dp: 3, disposition: 'priority-assets' },
