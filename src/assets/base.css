@@ -55,20 +55,6 @@
   --color-error-tint: rgba(198, 69, 69, 0.08);
   --color-error-tint-border: rgba(198, 69, 69, 0.25);
 
-  /* Matchup rating scale — a five-band diverging scale for the Analysis heatmap,
-     from strongly-against (warm red) through even (neutral) to strongly-favouring
-     (green). Each band carries a matching foreground (`-fg`) for its cell text. */
-  --color-rating-verylow: #b23b2f;
-  --color-rating-verylow-fg: #fdece9;
-  --color-rating-low: #d68a3c;
-  --color-rating-low-fg: #3a2609;
-  --color-rating-even: #d8d2c4;
-  --color-rating-even-fg: #4a4637;
-  --color-rating-high: #6bab7d;
-  --color-rating-high-fg: #0d2c19;
-  --color-rating-veryhigh: #2f8f57;
-  --color-rating-veryhigh-fg: #eafaf0;
-
   /* Matchup estimate grades — a seven-band diverging scale for the pre-round
      estimate grid, from great loss (red) through the three draw shades (neutral)
      to great victory (green). Each band carries its own foreground (`-fg`). */
@@ -178,18 +164,6 @@
   --color-error: #e0716a;
   --color-error-tint: rgba(224, 113, 106, 0.12);
   --color-error-tint-border: rgba(224, 113, 106, 0.3);
-
-  /* Rating scale — brighter bands tuned for the dark canvas. */
-  --color-rating-verylow: #c2544a;
-  --color-rating-verylow-fg: #fdece9;
-  --color-rating-low: #cf9147;
-  --color-rating-low-fg: #241703;
-  --color-rating-even: #4a473f;
-  --color-rating-even-fg: #e6e2d6;
-  --color-rating-high: #57a071;
-  --color-rating-high-fg: #eafaf0;
-  --color-rating-veryhigh: #3a9c62;
-  --color-rating-veryhigh-fg: #eafaf0;
 
   /* Estimate grades — same seven bands, darkened for the dark canvas. */
   --color-grade-gw: #3a9c62;

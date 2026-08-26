@@ -48,14 +48,9 @@ const router = createRouter({
       component: () => import('../views/LayoutsView.vue'),
     },
     {
-      path: '/analysis/vs-dispositions',
-      name: 'analysis-vs-dispositions',
-      component: () => import('../views/AnalysisVsDispositionsView.vue'),
-    },
-    {
-      path: '/analysis/detachments',
-      name: 'analysis-detachments',
-      component: () => import('../views/AnalysisDetachmentsView.vue'),
+      path: '/data/detachments',
+      name: 'data-detachments',
+      component: () => import('../views/DataDetachmentsView.vue'),
     },
   ],
   // Smoothly return to the top on every navigation (e.g. the home page's

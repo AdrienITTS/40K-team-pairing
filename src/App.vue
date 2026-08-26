@@ -7,16 +7,16 @@ import { useTheme } from './composables/useTheme'
 const { theme, toggleTheme } = useTheme()
 
 // Header dropdown groups. Only one is open at a time.
-type MenuKey = 'setup' | 'scoring' | 'analysis'
+type MenuKey = 'setup' | 'scoring' | 'data'
 const route = useRoute()
 const openMenu = ref<MenuKey | null>(null)
 
 const setupPaths = ['/dispositions', '/layouts']
 const scoringPaths = ['/primaries', '/secondaries']
-const analysisPaths = ['/analysis/vs-dispositions', '/analysis/detachments']
+const dataPaths = ['/data/detachments']
 const isSetupActive = computed(() => setupPaths.includes(route.path))
 const isScoringActive = computed(() => scoringPaths.includes(route.path))
-const isAnalysisActive = computed(() => analysisPaths.includes(route.path))
+const isDataActive = computed(() => dataPaths.includes(route.path))
 
 function toggleMenu(key: MenuKey) {
   openMenu.value = openMenu.value === key ? null : key
@@ -123,21 +123,18 @@ onUnmounted(() => {
           <button
             type="button"
             class="nav-link nav-trigger"
-            :class="{ active: isAnalysisActive || openMenu === 'analysis' }"
+            :class="{ active: isDataActive || openMenu === 'data' }"
             aria-haspopup="true"
-            :aria-expanded="openMenu === 'analysis'"
-            @click="toggleMenu('analysis')"
+            :aria-expanded="openMenu === 'data'"
+            @click="toggleMenu('data')"
           >
-            Analysis
+            Data
             <svg class="caret" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M6 9l6 6 6-6" />
             </svg>
           </button>
-          <div v-if="openMenu === 'analysis'" class="nav-menu" role="menu">
-            <RouterLink to="/analysis/vs-dispositions" class="nav-menu-item" role="menuitem">
-              vs. Dispositions
-            </RouterLink>
-            <RouterLink to="/analysis/detachments" class="nav-menu-item" role="menuitem">
+          <div v-if="openMenu === 'data'" class="nav-menu" role="menu">
+            <RouterLink to="/data/detachments" class="nav-menu-item" role="menuitem">
               Detachments
             </RouterLink>
           </div>
@@ -213,13 +210,8 @@ onUnmounted(() => {
         <RouterLink to="/primaries" class="mobile-link mobile-sub">Primaries</RouterLink>
         <RouterLink to="/secondaries" class="mobile-link mobile-sub">Secondaries</RouterLink>
 
-        <p class="mobile-group-label">Analysis</p>
-        <RouterLink to="/analysis/vs-dispositions" class="mobile-link mobile-sub">
-          vs. Dispositions
-        </RouterLink>
-        <RouterLink to="/analysis/detachments" class="mobile-link mobile-sub">
-          Detachments
-        </RouterLink>
+        <p class="mobile-group-label">Data</p>
+        <RouterLink to="/data/detachments" class="mobile-link mobile-sub">Detachments</RouterLink>
 
         <RouterLink to="/factions" class="mobile-link">Factions</RouterLink>
 

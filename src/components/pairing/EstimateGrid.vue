@@ -257,8 +257,8 @@ const total = computed(() => props.ourPlayers.length * props.oppPlayers.length *
 }
 
 /* The row-header column is pinned so the faction you're grading stays on screen
-   while the opponent columns scroll past it (same treatment as the Analysis
-   matrix). Both pinned cells need an opaque background to scroll cleanly over. */
+   while the opponent columns scroll past it. Both pinned cells need an opaque
+   background to scroll cleanly over. */
 .corner,
 .row-head {
   position: sticky;
