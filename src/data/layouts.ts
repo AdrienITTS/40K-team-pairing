@@ -1,5 +1,5 @@
 // Deployment-map layouts, extracted from the official Warhammer 40,000 Event
-// Companion PDF (version 1.1, 22 July 2026), pages 9-53 — one page per layout.
+// Companion PDF (version 1.2, August 2026), pages 9-53 — one page per layout.
 // Each unordered pair of Force Dispositions has three terrain layouts (the PDF
 // labels them A / B / C, matching how we surface them). Each page was cropped to
 // the battlefield plus its attacker/defender edge markers and saved as
