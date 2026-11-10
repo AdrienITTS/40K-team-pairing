@@ -6,6 +6,7 @@ import {
   detachmentsFor,
   dispositionLean,
   dispositionTally,
+  mfmFactionUrl,
 } from '../detachments'
 
 const factionKeys = allegiances.flatMap((a) => a.factions).map((f) => f.key)
@@ -75,13 +76,22 @@ describe('dispositionTally', () => {
     expect(detachmentsFor('adepta_sororitas')).toContainEqual({
       name: 'Hallowed Martyrs',
       dp: 3,
-      disposition: 'priority-assets',
+      disposition: 'take-and-hold',
     })
     expect(detachmentsFor('adepta_sororitas')).toContainEqual({
       name: 'Chorus of Condemnation',
       dp: 1,
       disposition: 'reconnaissance',
     })
+  })
+})
+
+describe('mfmFactionUrl', () => {
+  it('hyphenates the faction key, with Tau as the one exception', () => {
+    expect(mfmFactionUrl('adepta_sororitas')).toBe(
+      'https://mfm.warhammer-community.com/en/adepta-sororitas',
+    )
+    expect(mfmFactionUrl('tau')).toBe('https://mfm.warhammer-community.com/en/tau-empire')
   })
 })
 

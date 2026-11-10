@@ -2,7 +2,13 @@
 import { computed, ref } from 'vue'
 import { dispositions, dispositionName, type DispositionKey } from '../data/dispositions'
 import { allegiances, factionName } from '../data/factions'
-import { detachmentsFor, dispositionLean, dispositionTally, mfmSource } from '../data/detachments'
+import {
+  detachmentsFor,
+  dispositionLean,
+  dispositionTally,
+  mfmFactionUrl,
+  mfmSource,
+} from '../data/detachments'
 import DispositionIcon from '../components/DispositionIcon.vue'
 
 // Inline custom-property bindings keep the disposition accent a base.css token
@@ -140,7 +146,8 @@ const totalDetachments = computed(() => matrix.value.reduce((sum, row) => sum + 
               · leans <strong>{{ leaderNames }}</strong></template
             ><template v-else-if="leaders.length && leaders.length < tally.length">
               · widest pools in <strong>{{ leaderNames }}</strong></template
-            ><template v-else-if="leaders.length"> · an even spread across all five</template>
+            ><template v-else-if="leaders.length"> · an even spread across all five</template> ·
+            <a :href="mfmFactionUrl(selected)" target="_blank" rel="noopener">MFM page</a>
           </p>
         </div>
       </header>
