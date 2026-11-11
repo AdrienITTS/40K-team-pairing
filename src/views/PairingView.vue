@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import PairingSetup, { type SetupStep } from '../components/pairing/PairingSetup.vue'
 import PairingRunner from '../components/pairing/PairingRunner.vue'
 import PairingBoard from '../components/pairing/PairingBoard.vue'
@@ -7,8 +7,10 @@ import MatchupCard from '../components/pairing/MatchupCard.vue'
 import LayoutLightbox from '../components/pairing/LayoutLightbox.vue'
 import EstimateDrawer from '../components/pairing/EstimateDrawer.vue'
 import RoundProjection from '../components/pairing/RoundProjection.vue'
+import EstimateEditor from '../components/pairing/EstimateEditor.vue'
+import RoundSummary from '../components/pairing/RoundSummary.vue'
 import { usePairingSession } from '../composables/usePairingSession'
-import { layoutForRound, type LayoutLetter } from '../data/pairing'
+import { layoutForRound, type LayoutLetter, type PairingConfig } from '../data/pairing'
 import {
   estimateCount,
   projectRound,
@@ -77,18 +79,16 @@ const layoutStancesByMatchup = computed<
   return out
 })
 
-// PairingSetup unmounts once a round starts; when it reappears (e.g. after
-// "Change rosters") send the wizard back to step 1 so it doesn't resume mid-flow.
-watch(state, (s) => {
-  if (!s) setupStep.value = 'mode'
-})
+// The setup the wizard reopens on: the round just played when the captain asks
+// to edit it, nothing for a fresh setup.
+const setupSeed = ref<PairingConfig | null>(null)
 
 // A fresh pairing starts with the estimates card shown again.
 function resetEstimateUi() {
   estimatesOpen.value = true
 }
 
-function startRound(config: Parameters<typeof session.start>[0]) {
+function startRound(config: PairingConfig) {
   resetEstimateUi()
   session.start(config)
 }
@@ -98,10 +98,15 @@ function restartRound() {
   session.restart()
 }
 
-function changeRosters() {
+function backToSetup(seed: PairingConfig | null) {
+  setupSeed.value = seed
+  setupStep.value = seed ? 'armies-a' : 'mode'
   resetEstimateUi()
   session.reset()
 }
+
+const editSetup = () => backToSetup(state.value?.config ?? null)
+const newSetup = () => backToSetup(null)
 const isComplete = computed(() => state.value?.phase.kind === 'complete')
 const teamSize = computed(() => state.value?.config.teamA.players.length ?? 0)
 const decided = computed(() => state.value?.matchups.length ?? 0)
@@ -111,6 +116,16 @@ const decided = computed(() => state.value?.matchups.length ?? 0)
 const showEstimates = computed(
   () => estimatesOpen.value && Boolean(state.value) && !isComplete.value && hasEstimates.value,
 )
+
+// The estimate grid reopened over the live round or its results.
+const editingEstimates = ref(false)
+const estimateTeams = computed(() => {
+  const config = state.value?.config
+  if (!config) return null
+  return (config.estimateSide ?? 'A') === 'A'
+    ? { ours: config.teamA, theirs: config.teamB }
+    : { ours: config.teamB, theirs: config.teamA }
+})
 
 function onLayout(matchupId: string, value: LayoutLetter) {
   session.layout(matchupId, value)
@@ -138,7 +153,7 @@ function onLayout(matchupId: string, value: LayoutLetter) {
       <!-- 1 · Setup -->
       <section v-if="!state" class="panel">
         <h2 v-if="setupStep === 'mode'" class="panel-title">Set up the round</h2>
-        <PairingSetup v-model:step="setupStep" @start="startRound" />
+        <PairingSetup v-model:step="setupStep" :initial="setupSeed" @start="startRound" />
       </section>
 
       <!-- 2 · Running the modules -->
@@ -157,6 +172,9 @@ function onLayout(matchupId: string, value: LayoutLetter) {
             @click="estimatesOpen = !estimatesOpen"
           >
             {{ estimatesOpen ? 'Hide' : 'Show' }} estimates
+          </button>
+          <button type="button" class="estimates-toggle" @click="editingEstimates = true">
+            Edit estimates
           </button>
           <button type="button" class="text-link reset" :disabled="!canUndo" @click="session.back">
             ← Previous choice
@@ -196,12 +214,20 @@ function onLayout(matchupId: string, value: LayoutLetter) {
             </p>
           </div>
           <div class="results-actions">
-            <button type="button" class="btn-secondary" @click="changeRosters">
-              Change rosters
+            <button type="button" class="btn-secondary" @click="newSetup">New setup</button>
+            <button type="button" class="btn-secondary" @click="editSetup">Edit setup</button>
+            <button type="button" class="btn-secondary" @click="editingEstimates = true">
+              Edit estimates
             </button>
-            <button type="button" class="btn-primary" @click="restartRound">New pairing →</button>
+            <button type="button" class="btn-primary" @click="restartRound">
+              Re-run pairing →
+            </button>
           </div>
         </div>
+
+        <RoundSummary :state="state" class="results-summary" />
+
+        <h3 class="results-section-title">Table details</h3>
 
         <RoundProjection v-if="hasEstimates" :state="state" class="results-projection" />
 
@@ -229,6 +255,15 @@ function onLayout(matchupId: string, value: LayoutLetter) {
     </div>
 
     <LayoutLightbox :request="layoutRequest" @close="layoutRequest = null" />
+    <EstimateEditor
+      v-if="editingEstimates && state && estimateTeams"
+      :model-value="state.config.estimates ?? {}"
+      :team-name="estimateTeams.ours.name"
+      :our-players="estimateTeams.ours.players"
+      :opp-players="estimateTeams.theirs.players"
+      @update:model-value="session.estimates"
+      @close="editingEstimates = false"
+    />
   </main>
 </template>
 
@@ -439,13 +474,26 @@ function onLayout(matchupId: string, value: LayoutLetter) {
   color: var(--color-accent-amber);
 }
 
-/* "Change rosters" (back to setup) sits beside the primary "New pairing"
-   (same rosters, fresh live pairing). */
+/* "New setup" (blank wizard) and "Edit setup" (wizard reopened on this round)
+   sit beside the primary "Re-run pairing" (same setup, fresh live pairing). */
 .results-actions {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
   flex-wrap: wrap;
+}
+
+.results-summary {
+  margin-bottom: var(--spacing-lg);
+}
+
+.results-section-title {
+  margin-bottom: var(--spacing-sm);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.3px;
+  color: var(--color-ink);
 }
 
 .results-projection {

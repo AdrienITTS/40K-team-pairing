@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { usePairingSession } from '../usePairingSession'
 import { currentActor, type PairingConfig } from '../../data/pairing'
+import type { EstimateTable } from '../../data/estimates'
 
 function makeConfig(): PairingConfig {
   return {
@@ -97,5 +98,18 @@ describe('usePairingSession', () => {
     expect(session.canUndo.value).toBe(true)
     session.restart()
     expect(session.canUndo.value).toBe(false)
+  })
+
+  it('applies edited estimates now and keeps them when a choice is undone', () => {
+    const session = usePairingSession()
+    session.start(makeConfig())
+    session.defender('a-0')
+    const edited: EstimateTable = { 'a-0|b-0': { good: 'GW', bad: null } }
+
+    session.estimates(edited)
+    session.back()
+
+    expect(session.state.value!.draft).toEqual({})
+    expect(session.state.value!.config.estimates).toEqual(edited)
   })
 })

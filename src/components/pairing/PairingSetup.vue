@@ -18,6 +18,14 @@ import {
 import { estimateCount, layoutStanceCount, type EstimateTable } from '../../data/estimates'
 import { parsePairingConfig } from '../../data/pairingText'
 
+const props = defineProps<{
+  /**
+   * A setup to reopen the wizard on — the round just played, or a pasted one the
+   * captain wants to check — so nothing has to be entered twice.
+   */
+  initial?: PairingConfig | null
+}>()
+
 const emit = defineEmits<{ start: [config: PairingConfig] }>()
 
 /**
@@ -172,9 +180,9 @@ const rostersReady = computed(
     factionsB.value.length === factionsA.value.length,
 )
 
-/** Whether the current step is answered well enough to move on. */
-const canAdvance = computed(() => {
-  switch (step.value) {
+/** Whether a step is answered well enough to move past it. */
+function stepAnswered(key: SetupStep): boolean {
+  switch (key) {
     case 'mode':
       return mode.value !== null
     case 'round':
@@ -190,7 +198,15 @@ const canAdvance = computed(() => {
     default:
       return true
   }
-})
+}
+
+const canAdvance = computed(() => stepAnswered(step.value))
+
+// The breadcrumb doubles as navigation: a step is reachable once every step
+// before it is answered, so a reopened setup can jump straight to the grid.
+function reachable(index: number): boolean {
+  return steps.value.slice(1, index).every(stepAnswered)
+}
 
 const canStart = computed(() =>
   activeMode.value === 'quick' ? parsed.value.config !== null : rostersReady.value,
@@ -331,6 +347,28 @@ function roster(side: TeamSide): Player[] {
 const rosterA = computed(() => roster('A'))
 const rosterB = computed(() => roster('B'))
 
+function dispositionMap(players: Player[]): Record<string, DispositionKey> {
+  return Object.fromEntries(
+    players.flatMap((p) => (p.faction && p.disposition ? [[p.faction, p.disposition]] : [])),
+  )
+}
+
+/** Fill the full-configuration wizard from an existing setup. */
+function load(config: PairingConfig) {
+  mode.value = 'full'
+  round.value = config.round
+  teamSize.value = config.teamA.players.length
+  teamAName.value = config.teamA.name
+  teamBName.value = config.teamB.name
+  factionsA.value = config.teamA.players.flatMap((p) => (p.faction ? [p.faction] : []))
+  factionsB.value = config.teamB.players.flatMap((p) => (p.faction ? [p.faction] : []))
+  dispositionsA.value = dispositionMap(config.teamA.players)
+  dispositionsB.value = dispositionMap(config.teamB.players)
+  estimates.value = config.estimates ?? {}
+}
+
+if (props.initial) load(props.initial)
+
 const estimatesSet = computed(() => estimateCount(estimates.value))
 const layoutsSet = computed(() => layoutStanceCount(estimates.value))
 
@@ -396,6 +434,13 @@ function chosenDisposition(side: TeamSide, key: string): DispositionKey | undefi
   return dispsRef(side).value[key]
 }
 
+// A pasted setup can be opened in the wizard to check or fix it before playing.
+function reviewPasted() {
+  if (!parsed.value.config) return
+  load(parsed.value.config)
+  step.value = 'estimates'
+}
+
 function submit() {
   if (!canStart.value) return
   if (activeMode.value === 'quick') {
@@ -424,7 +469,15 @@ function submit() {
         :key="key"
         :class="{ active: step === key, done: i < stepIndex }"
       >
-        {{ i + 1 }} · {{ STEP_LABELS[key] }}
+        <button
+          type="button"
+          class="stepper-link"
+          :disabled="step === key || !reachable(i)"
+          :aria-current="step === key ? 'step' : undefined"
+          @click="goTo(i)"
+        >
+          {{ i + 1 }} · {{ STEP_LABELS[key] }}
+        </button>
       </li>
     </ol>
 
@@ -743,6 +796,14 @@ function submit() {
 
         <div class="nav-row">
           <button type="button" class="btn-secondary nav-back" @click="prevStep">← Back</button>
+          <button
+            type="button"
+            class="btn-secondary nav-review"
+            :disabled="!canStart"
+            @click="reviewPasted"
+          >
+            Review &amp; edit
+          </button>
           <button type="submit" class="btn-primary nav-next" :disabled="!canStart">
             Start pairing →
           </button>
@@ -821,6 +882,28 @@ function submit() {
 
 .stepper li.done {
   color: var(--color-muted);
+}
+
+.stepper-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.stepper-link:disabled {
+  cursor: default;
+}
+
+.stepper-link:not(:disabled):hover {
+  color: var(--color-ink);
+}
+
+.stepper-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 /* Wizard step swap: slide + fade between the round / team-A / team-B panes. */
@@ -1394,8 +1477,18 @@ function submit() {
   gap: var(--spacing-sm);
 }
 
-.nav-next {
+.nav-next,
+.nav-review {
   margin-left: auto;
+}
+
+.nav-review + .nav-next {
+  margin-left: 0;
+}
+
+.nav-review:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .nav-next:disabled {
@@ -1457,6 +1550,7 @@ function submit() {
   }
 
   .nav-row {
+    flex-wrap: wrap;
     gap: var(--spacing-xs);
   }
 

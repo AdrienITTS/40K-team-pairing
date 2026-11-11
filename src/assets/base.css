@@ -56,22 +56,24 @@
   --color-error-tint-border: rgba(198, 69, 69, 0.25);
 
   /* Matchup estimate grades — a seven-band diverging scale for the pre-round
-     estimate grid, from great loss (red) through the three draw shades (neutral)
-     to great victory (green). Each band carries its own foreground (`-fg`). */
-  --color-grade-gw: #2f8f57;
-  --color-grade-gw-fg: #eafaf0;
-  --color-grade-w: #6bab7d;
-  --color-grade-w-fg: #0d2c19;
-  --color-grade-dplus: #c3d1bd;
-  --color-grade-dplus-fg: #2c3a27;
-  --color-grade-d: #d8d2c4;
-  --color-grade-d-fg: #4a4637;
-  --color-grade-dminus: #e2cdb4;
-  --color-grade-dminus-fg: #4a3721;
-  --color-grade-l: #d68a3c;
-  --color-grade-l-fg: #3a2609;
-  --color-grade-gl: #b23b2f;
-  --color-grade-gl-fg: #fdece9;
+     estimate grid, from great loss (red) through the three draw shades (light
+     orange, yellow, light green) to great victory (green). Neighbouring bands sit
+     at least ΔE 15 apart so they read at a glance on a small cell, like the
+     team's own spreadsheet. Each band carries its own foreground (`-fg`). */
+  --color-grade-gw: #1f7a47;
+  --color-grade-gw-fg: #ffffff;
+  --color-grade-w: #52b26f;
+  --color-grade-w-fg: #0b2a16;
+  --color-grade-dplus: #b5dd8f;
+  --color-grade-dplus-fg: #1f3a12;
+  --color-grade-d: #f0d65a;
+  --color-grade-d-fg: #3d3208;
+  --color-grade-dminus: #f5a85e;
+  --color-grade-dminus-fg: #3f2008;
+  --color-grade-l: #e2643c;
+  --color-grade-l-fg: #2a0d03;
+  --color-grade-gl: #a8231d;
+  --color-grade-gl-fg: #ffffff;
 
   --color-primary-tint: rgba(204, 120, 92, 0.08);
 
@@ -165,21 +167,21 @@
   --color-error-tint: rgba(224, 113, 106, 0.12);
   --color-error-tint-border: rgba(224, 113, 106, 0.3);
 
-  /* Estimate grades — same seven bands, darkened for the dark canvas. */
-  --color-grade-gw: #3a9c62;
-  --color-grade-gw-fg: #eafaf0;
-  --color-grade-w: #57a071;
-  --color-grade-w-fg: #eafaf0;
-  --color-grade-dplus: #3f5442;
-  --color-grade-dplus-fg: #dce9d8;
-  --color-grade-d: #4a473f;
-  --color-grade-d-fg: #e6e2d6;
-  --color-grade-dminus: #574636;
-  --color-grade-dminus-fg: #f0dfcc;
-  --color-grade-l: #cf9147;
-  --color-grade-l-fg: #241703;
-  --color-grade-gl: #c2544a;
-  --color-grade-gl-fg: #fdece9;
+  /* Estimate grades — same seven hues, kept saturated so they still separate on the dark canvas. */
+  --color-grade-gw: #24804b;
+  --color-grade-gw-fg: #ffffff;
+  --color-grade-w: #6cc283;
+  --color-grade-w-fg: #0b2a16;
+  --color-grade-dplus: #a9d68a;
+  --color-grade-dplus-fg: #1f3a12;
+  --color-grade-d: #d9c24f;
+  --color-grade-d-fg: #2e2506;
+  --color-grade-dminus: #e59a55;
+  --color-grade-dminus-fg: #2e1705;
+  --color-grade-l: #d8613d;
+  --color-grade-l-fg: #1f0a02;
+  --color-grade-gl: #b73a32;
+  --color-grade-gl-fg: #ffffff;
 
   --color-primary-tint: rgba(204, 120, 92, 0.18);
 }

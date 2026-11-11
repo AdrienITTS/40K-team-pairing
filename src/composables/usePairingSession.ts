@@ -11,6 +11,7 @@ import {
   type PairingConfig,
   type PairingState,
 } from '../data/pairing'
+import type { EstimateTable } from '../data/estimates'
 
 /**
  * Reactive driver around the pure pairing state machine in `data/pairing.ts`.
@@ -84,6 +85,18 @@ export function usePairingSession() {
     if (state.value) state.value = recordLayout(state.value, matchupId, value)
   }
 
+  // Estimates only feed the projection and the rail, never the pairing modules,
+  // so they can change mid-round. The undo stack gets the new table too, or
+  // "Previous choice" would quietly bring the old estimates back.
+  function estimates(table: EstimateTable) {
+    const withTable = (s: PairingState): PairingState => ({
+      ...s,
+      config: { ...s.config, estimates: table },
+    })
+    if (state.value) state.value = withTable(state.value)
+    past.value = past.value.map(withTable)
+  }
+
   /** Whether there is an earlier choice to step back to. */
   const canUndo = computed(() => past.value.length > 0)
 
@@ -107,5 +120,6 @@ export function usePairingSession() {
     counter,
     next,
     layout,
+    estimates,
   }
 }

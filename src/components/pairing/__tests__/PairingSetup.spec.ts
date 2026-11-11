@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import PairingSetup from '../PairingSetup.vue'
-import { EXAMPLE_SETUP } from '../../../data/pairingText'
+import { EXAMPLE_SETUP, parsePairingConfig } from '../../../data/pairingText'
 
 type Wrapper = ReturnType<typeof mount<typeof PairingSetup>>
 
@@ -229,6 +229,18 @@ describe('PairingSetup — quick pairing', () => {
     expect(Object.keys(config.estimates)).toHaveLength(4)
   })
 
+  it('opens a pasted setup in the full wizard, on the estimates step', async () => {
+    const wrapper = await mountPaste()
+    await wrapper.find('.paste-input').setValue(EXAMPLE_SETUP)
+
+    await wrapper.find('.nav-review').trigger('click')
+
+    expect(lastStep(wrapper)).toEqual(['estimates'])
+    await wrapper.setProps({ step: 'estimates' })
+    expect(stepLabels(wrapper)).toHaveLength(7)
+    expect(wrapper.find('.picker-count').text()).toContain('7 grades, 5 layouts')
+  })
+
   it('offers the example spreadsheet as a download for the chosen team size', async () => {
     const wrapper = await mountPaste()
     const link = wrapper.find('.download-link')
@@ -238,5 +250,28 @@ describe('PairingSetup — quick pairing', () => {
     expect(link.attributes('href')).toBe('/examples/W40k-Estimation-Template-5p.xlsx')
     await wrapper.find('.download-size').setValue(8)
     expect(link.attributes('href')).toBe('/examples/W40k-Estimation-Template-8p.xlsx')
+  })
+})
+
+describe('PairingSetup — reopened on an existing setup', () => {
+  const config = parsePairingConfig(EXAMPLE_SETUP).config!
+
+  it('starts the same round again without re-entering anything', async () => {
+    const wrapper = mount(PairingSetup, { props: { step: 'estimates', initial: config } })
+
+    await wrapper.find('form').trigger('submit')
+
+    expect(wrapper.emitted('start')![0]![0]).toEqual(config)
+  })
+
+  it('lets the breadcrumb jump to any step once the setup is complete', async () => {
+    const wrapper = mount(PairingSetup, { props: { step: 'armies-a', initial: config } })
+    const links = wrapper.findAll('.stepper-link')
+    const enabled = links.map((l) => l.attributes('disabled') === undefined)
+
+    await links[links.length - 1]!.trigger('click')
+
+    expect(enabled).toEqual([true, true, false, true, true, true, true])
+    expect(lastStep(wrapper)).toEqual(['estimates'])
   })
 })
